@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CreativeForge Visual Node Test</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: grab; color: white; font-weight: bold; }
+    .btn-text { background: #2196F3; }
+    .btn-image { background: #FF9800; }
+    .canvas { background: white; border: 2px solid #ddd; border-radius: 8px; min-height: 500px; padding: 20px; position: relative; }
+    .node { padding: 15px; border: 2px solid #2196F3; border-radius: 8px; background: white; margin: 10px; width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .node.image { border-color: #FF9800; }
+    .node.running { border-color: #ffc107; }
+    .node.success { border-color: #4CAF50; background: #f1f8f4; }
+    .node.error { border-color: #f44336; background: #fdf2f2; }
+    textarea, input { width: 100%; margin: 5px 0; padding: 5px; }
+    button.gen { width: 100%; padding: 8px; margin-top: 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button.gen:disabled { background: #ccc; cursor: not-allowed; }
+    .status { font-size: 12px; margin-top: 5px; }
+    .log { background: #000; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🎨 CreativeForge Visual Node Test (Port 3003 / 5000)</h1>
+  
+  <div class="toolbar">
+    <div class="btn btn-text" draggable="true" ondragstart="drag(event, 'text')">📝 Text Generation</div>
+    <div class="btn btn-image" draggable="true" ondragstart="drag(event, 'image')">🖼️ Image Generation</div>
+    <button onclick="clearAll()" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer;">🗑️ Clear All</button>
+  </div>
+
+  <div class="canvas" id="canvas" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <p style="color: #999; text-align: center; margin-top: 200px;">Drag nodes here from the toolbar above</p>
+  </div>
+
+  <div class="log" id="log">
+    <div>✓ Backend: http://localhost:5000</div>
+    <div>✓ Frontend: http://localhost:3003</div>
+    <div>✓ Ready. Drag a node to start.</div>
+  </div>
+
+  <script>
+    let nodeCount = 0;
+    const logEl = document.getElementById('log');
+
+    function addLog(msg) {
+      logEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function drag(ev, type) {
+      ev.dataTransfer.setData("nodeType", type);
+    }
+
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    function drop(ev) {
+      ev.preventDefault();
+      const type = ev.dataTransfer.getData("nodeType");
+      createNode(type, ev.clientX - 140, ev.clientY - 100);
+    }
+
+    function createNode(type, x, y) {
+      nodeCount++;
+      const id = `${type}_${nodeCount}`;
+      const isImage = type === 'image';
+      const borderColor = isImage ? '#FF9800' : '#2196F3';
+      const label = isImage ? 'Image Generation' : 'Text Generation';
+      const placeholder = isImage ? 'Describe image...' : 'Enter prompt...';
+
+      const nodeHTML = `
+        <div class="node ${isImage ? 'image' : ''}" id="${id}" style="position: absolute; left: ${x}px; top: ${y}px;">
+          <div style="font-weight: bold; color: ${borderColor}; margin-bottom: 10px;">${label}</div>
+          ${isImage ? 
+            `<input type="text" id="${id}_prompt" placeholder="${placeholder}" value="A beautiful sunset">` :
+            `<textarea id="${id}_prompt" rows="3" placeholder="${placeholder}">A beautiful sunset over mountains</textarea>`
+          }
+          <button class="gen" id="${id}_btn" onclick="executeNode('${id}', '${type}')">
+            ${isImage ? '🖼️ Generate Image' : '✨ Generate Text'}
+          </button>
+          <div class="status" id="${id}_status"></div>
+        </div>
+      `;
+
+      document.getElementById('canvas').innerHTML += nodeHTML;
+      addLog(`➕ Created ${label} node`);
+    }
+
+    async function executeNode(id, type) {
+      const prompt = document.getElementById(`${id}_prompt`).value;
+      const btn = document.getElementById(`${id}_btn`);
+      const statusEl = document.getElementById(`${id}_status`);
+      const nodeEl = document.getElementById(id);
+
+      nodeEl.className = `node ${type === 'image' ? 'image ' : ''}running`;
+      btn.disabled = true;
+      btn.textContent = '⏳ Running...';
+      statusEl.textContent = 'Running...';
+      statusEl.style.color = '#ffc107';
+
+      addLog(`🚀 Executing ${type} node with prompt: "${prompt.substring(0, 30)}..."`);
+
+      try {
+        const response = await fetch('http://localhost:5000/generations/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            user_id: 'mock_user_123',
+            emotion: 'creative',
+            intensity: 0.8
+          })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        const result = data.result || 'Success!';
+
+        nodeEl.className = `node ${type === 'image' ? 'image ' : ''}success`;
+        btn.textContent = '✓ Done!';
+        statusEl.textContent = `✓ Success! ${result.substring(0, 50)}...`;
+        statusEl.style.color = '#4CAF50';
+
+        addLog(`✅ ${type} node completed: ${result.substring(0, 50)}...`);
+
+      } catch (error) {
+        nodeEl.className = `node ${type === 'image' ? 'image ' : ''}error`;
+        btn.textContent = '✗ Failed';
+        statusEl.textContent = `✗ Error: ${error.message}`;
+        statusEl.style.color = '#f44336';
+
+        addLog(`❌ ${type} node failed: ${error.message}`);
+      }
+    }
+
+    function clearAll() {
+      document.getElementById('canvas').innerHTML = '<p style="color: #999; text-align: center; margin-top: 200px;">Drag nodes here from the toolbar above</p>';
+      addLog('🗑️ Cleared all nodes');
+    }
+
+    // Test backend on load
+    window.onload = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/generations/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: 'test', user_id: 'mock_user_123' })
+        });
+        if (res.ok) addLog('✅ Backend API test passed!');
+        else addLog(`⚠️ Backend returned ${res.status}`);
+      } catch (e) {
+        addLog(`❌ Backend connection failed: ${e.message}`);
+      }
+    };
+  </script>
+</body>
+</html>

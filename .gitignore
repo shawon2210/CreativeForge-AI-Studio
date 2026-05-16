@@ -1,0 +1,75 @@
+# ============================================
+# CreativeForge AI Studio — Git Ignore Rules
+# ============================================
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environments
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# OS Generated
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build Outputs
+apps/web/dist/
+apps/web/node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+.pytest_cache/
+
+# Infrastructure Secrets
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.*
+infrastructure/terraform/*.tfvars
+
+# Temporary Files
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+
+# Vite
+apps/web/node_modules/.vite/
+apps/web/node_modules/.vite-temp/
+
+# Misc
+*.tgz
+*.tar.gz

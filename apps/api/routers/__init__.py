@@ -1,0 +1,1 @@
+# Routers __init__.py - intentionally empty to avoid importing sqlalchemy-dependent modules in mock mode
