@@ -16,9 +16,19 @@ test.describe('CreativeForge Docker E2E', () => {
 
   test('All 20 feature cards visible on dashboard', async ({ page }) => {
     await page.goto(BASE_URL);
-    // Feature cards are inside the grid below "All Features" heading
-    const cards = page.locator('text=All Features').locator('..').locator('..').locator('[style*="cursor: pointer"]');
-    await expect(cards).toHaveCount(20, { timeout: 10000 });
+    // Verify the feature grid section is visible
+    await expect(page.locator('text=All Features')).toBeVisible();
+    // Verify at least the first and last feature cards are visible
+    await expect(page.locator('text=AI Generations')).toBeVisible();
+    await expect(page.locator('text=Future Features')).toBeVisible();
+    // Verify the grid container has the expected number of card children
+    const cardCount = await page.evaluate(() => {
+      const heading = Array.from(document.querySelectorAll('h2')).find(h => h.textContent?.includes('All Features'));
+      if (!heading) return 0;
+      const grid = heading.parentElement?.parentElement?.querySelector('[style*="grid"]');
+      return grid ? grid.children.length : 0;
+    });
+    expect(cardCount).toBe(20);
   });
 
   // ============================================================
@@ -46,7 +56,7 @@ test.describe('CreativeForge Docker E2E', () => {
 
   test('Asset Management page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/asset-management`);
-    await expect(page.getByRole('heading', { name: 'Asset Management', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Asset Management', exact: true }).first()).toBeVisible();
   });
 
   test('Prompt to Product page loads', async ({ page }) => {
