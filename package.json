@@ -10,5 +10,8 @@
     "dev": "concurrently \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=apps/api\"",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "vite": "^7.3.3"
   }
 }
