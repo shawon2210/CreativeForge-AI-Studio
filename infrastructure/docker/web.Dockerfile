@@ -3,12 +3,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy web app source
+# Copy package files first (for better layer caching)
+COPY apps/web/package.json ./
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy source code
 COPY apps/web/ ./
 
-# Install dependencies and build
-RUN npm install --legacy-peer-deps && \
-    npm run build
+# Build
+RUN npm run build
 
 # ---- Production stage ----
 FROM nginx:stable-alpine

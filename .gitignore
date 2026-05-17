@@ -53,6 +53,14 @@ coverage/
 *.lcov
 .pytest_cache/
 
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/playwright/.cache/
+
+# TypeScript build info
+*.tsbuildinfo
+
 # Infrastructure Secrets
 infrastructure/terraform/.terraform/
 infrastructure/terraform/*.tfstate

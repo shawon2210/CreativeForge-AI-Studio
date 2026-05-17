@@ -15,7 +15,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
+    "noUncheckedSideEffectImports": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
