@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+
+  # ---- Backend API ----
+  api:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/api.Dockerfile
+    container_name: creativeforge-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ENV=test
+      - CREATIVEFORGE_MODE=mock
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/creativeforge
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:80
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---- Frontend Web App ----
+  web:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/web.Dockerfile
+    container_name: creativeforge-web
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ---- Redis Cache ----
+  redis:
+    image: redis:7-alpine
+    container_name: creativeforge-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ---- PostgreSQL Database ----
+  postgres:
+    image: postgres:15-alpine
+    container_name: creativeforge-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: creativeforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d creativeforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  postgres_data:

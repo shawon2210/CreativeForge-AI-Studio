@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: creativeforge
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - postgres-pvc.yaml
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - redis-pvc.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - gpu-workers.yaml
+  - hpa-api.yaml
+  - hpa-web.yaml
+  - hpa-gpu-workers.yaml
+  - ingress.yaml
+
+commonLabels:
+  app: creativeforge
+  managed-by: kustomize
+
+images:
+  - name: ghcr.io/YOUR_REPO/creativeforge-api
+    newTag: latest
+  - name: ghcr.io/YOUR_REPO/creativeforge-web
+    newTag: latest

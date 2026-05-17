@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+apps/web/node_modules
+apps/web/dist
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+apps/api/__pycache__
+apps/api/**/__pycache__
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docs
+*.md
+LICENSE
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+
+# Tests
+apps/web/tests
+apps/web/playwright.config.ts
+apps/web/playwright-report
+
+# Infrastructure (not needed in image)
+infrastructure/kubernetes
+infrastructure/terraform
+
+# CI
+.github
+
+# Misc
+.env
+.env.local
+.env.*.local

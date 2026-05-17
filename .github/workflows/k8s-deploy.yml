@@ -1,0 +1,187 @@
+name: Kubernetes Deployment
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: creativeforge-api
+  IMAGE_NAME_FRONTEND: creativeforge-web
+  K8S_NAMESPACE: creativeforge
+
+jobs:
+
+  # ============================================================
+  # Job 1: Build & Push Docker Images to GHCR
+  # ============================================================
+  build-and-push:
+    name: "Build & Push Docker Images"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      # ---- Backend ----
+      - name: Build backend image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_BACKEND }}:latest \
+            -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }} \
+            -f infrastructure/docker/api.Dockerfile .
+
+      - name: Push backend image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+          docker push ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+
+      # ---- Frontend ----
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_FRONTEND }}:latest \
+            -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} \
+            -f infrastructure/docker/web.Dockerfile .
+
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+          docker push ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
+
+  # ============================================================
+  # Job 2: Deploy to Kubernetes
+  # ============================================================
+  deploy:
+    name: "Deploy to Kubernetes"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.29.0"
+
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infrastructure/kubernetes/manifests/namespace.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/secrets.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/postgres-pvc.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/postgres-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/postgres-service.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/redis-pvc.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/redis-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/redis-service.yaml
+
+      - name: Wait for data layer readiness
+        run: |
+          kubectl wait --for=condition=ready pod -l app=postgres -n ${{ env.K8S_NAMESPACE }} --timeout=120s || true
+          kubectl wait --for=condition=ready pod -l app=redis -n ${{ env.K8S_NAMESPACE }} --timeout=60s || true
+
+      - name: Deploy backend with new image
+        run: |
+          kubectl set image deployment/creativeforge-api \
+            api=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f infrastructure/kubernetes/manifests/backend-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/backend-service.yaml
+
+      - name: Deploy frontend with new image
+        run: |
+          kubectl set image deployment/creativeforge-web \
+            web=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f infrastructure/kubernetes/manifests/frontend-deployment.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/frontend-service.yaml
+
+      - name: Deploy GPU workers
+        run: |
+          kubectl apply -f infrastructure/kubernetes/manifests/gpu-workers.yaml
+
+      - name: Apply HPA
+        run: |
+          kubectl apply -f infrastructure/kubernetes/manifests/hpa-api.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/hpa-web.yaml
+          kubectl apply -f infrastructure/kubernetes/manifests/hpa-gpu-workers.yaml
+
+      - name: Apply Ingress
+        run: |
+          kubectl apply -f infrastructure/kubernetes/manifests/ingress.yaml
+
+      - name: Wait for rollout — backend
+        run: |
+          kubectl rollout status deployment/creativeforge-api -n ${{ env.K8S_NAMESPACE }} --timeout=300s
+
+      - name: Wait for rollout — frontend
+        run: |
+          kubectl rollout status deployment/creativeforge-web -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+
+      - name: Verify deployment health
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }} -o wide
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n ${{ env.K8S_NAMESPACE }}
+          echo ""
+          echo "=== HPA ==="
+          kubectl get hpa -n ${{ env.K8S_NAMESPACE }}
+          echo ""
+          echo "=== Ingress ==="
+          kubectl get ingress -n ${{ env.K8S_NAMESPACE }}
+
+      - name: Run smoke tests
+        run: |
+          # Port-forward API for testing
+          kubectl port-forward svc/creativeforge-api-service 5000:5000 -n ${{ env.K8S_NAMESPACE }} &
+          PF_PID=$!
+          sleep 5
+
+          # Health check
+          echo "=== API Health ==="
+          curl -sf http://localhost:5000/health | python3 -m json.tool || echo "API health check failed"
+
+          # Route count
+          echo ""
+          echo "=== API Routes ==="
+          curl -sf http://localhost:5000/openapi.json | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          paths = list(d.get('paths', {}).keys())
+          print(f'Total routes: {len(paths)}')
+          we = [p for p in paths if 'world' in p.lower()]
+          ea = [p for p in paths if 'emotion' in p.lower()]
+          print(f'World Engine: {len(we)} routes')
+          print(f'Emotion AI: {len(ea)} routes')
+          " || echo "Route check failed"
+
+          kill $PF_PID 2>/dev/null || true
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed — rolling back..."
+          kubectl rollout undo deployment/creativeforge-api -n ${{ env.K8S_NAMESPACE }} || true
+          kubectl rollout undo deployment/creativeforge-web -n ${{ env.K8S_NAMESPACE }} || true
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }}

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: creativeforge-api
+  namespace: creativeforge
+  labels:
+    app: creativeforge-api
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: creativeforge-api
+  template:
+    metadata:
+      labels:
+        app: creativeforge-api
+        tier: backend
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/YOUR_REPO/creativeforge-api:latest
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+          env:
+            - name: ENV
+              value: "production"
+            - name: CREATIVEFORGE_MODE
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: database_url
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: jwt_secret
+            - name: CORS_ORIGINS
+              value: "https://creativeforge.local,https://www.creativeforge.local"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30

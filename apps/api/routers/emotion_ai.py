@@ -1,19 +1,26 @@
+import os
+import sys
+from pathlib import Path
 from fastapi import APIRouter, Body
 from typing import Dict, Optional
 
-from ..services.emotion_service import (
+# Add apps/api to Python path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from services.emotion_service import (
     detect_emotion_from_prompt,
     map_emotion_to_visual_params,
     get_user_emotion_profile,
     update_emotion_profile,
     add_generation_emotion
 )
-from ..models.emotion_ai import EmotionProfile, GenerationEmotion
+from models.emotion_ai import EmotionProfile, GenerationEmotion
 
 router = APIRouter(prefix="/emotion", tags=["Emotional AI"])
 
-@router.post("/analyze/", response_model=Dict[str, float])
-async def analyze_emotion_endpoint(prompt: str = Body(...)):
+@router.post("/analyze/")
+async def analyze_emotion_endpoint(body: dict = Body(...)):
+    prompt = body.get("prompt", "")
     return detect_emotion_from_prompt(prompt=prompt)
 
 @router.post("/map-visuals/", response_model=Dict)

@@ -1,9 +1,15 @@
 import os
+import sys
+from pathlib import Path
 from typing import Dict, Optional, List
 from datetime import datetime
+
+# Add apps/api to Python path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
 from sqlmodel import Session, select
 
-from ..models.emotion_ai import EmotionProfile, GenerationEmotion
+from models.emotion_ai import EmotionProfile, GenerationEmotion
 
 # Dual mode
 MODE = os.getenv("CREATIVEFORGE_MODE", "mock")

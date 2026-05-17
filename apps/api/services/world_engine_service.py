@@ -1,9 +1,15 @@
 import os
+import sys
+from pathlib import Path
 from typing import Optional, List, Dict
 from datetime import datetime
+
+# Add apps/api to Python path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
 from sqlmodel import Session, select
 
-from ..models.world_engine import World, Character, Location, TimelineEvent, LoreEntry
+from models.world_engine import World, Character, Location, TimelineEvent, LoreEntry
 
 # Dual mode support (matches project convention)
 MODE = os.getenv("CREATIVEFORGE_MODE", "mock")

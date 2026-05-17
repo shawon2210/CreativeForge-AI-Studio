@@ -22,17 +22,8 @@ from routers.collaborative_studio import router as collab_router
 from routers.creative_twin import router as twin_router
 from routers.research_inspiration import router as research_router
 from routers.future_ready import router as future_router
-
-# These routers import services that depend on sqlmodel/DB.
-# Wrap in try/except so mock mode still starts without PostgreSQL.
-try:
-    from routers.world_engine import router as world_router
-except Exception:
-    world_router = None
-try:
-    from routers.emotion_ai import router as emotion_router
-except Exception:
-    emotion_router = None
+from routers.world_engine import router as world_router
+from routers.emotion_ai import router as emotion_router
 
 app = FastAPI(title="CreativeForge API - Mock Mode")
 
@@ -135,12 +126,8 @@ app.include_router(collab_router)
 app.include_router(twin_router)
 app.include_router(research_router)
 app.include_router(future_router)
-
-# Include world_engine and emotion_ai if imports succeeded
-if world_router:
-    app.include_router(world_router)
-if emotion_router:
-    app.include_router(emotion_router)
+app.include_router(world_router)
+app.include_router(emotion_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)
