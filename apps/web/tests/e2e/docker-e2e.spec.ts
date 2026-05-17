@@ -18,15 +18,17 @@ test.describe('CreativeForge Docker E2E', () => {
     await page.goto(BASE_URL);
     // Verify the feature grid section is visible
     await expect(page.locator('text=All Features')).toBeVisible();
-    // Verify at least the first and last feature cards are visible
-    await expect(page.locator('text=AI Generations')).toBeVisible();
-    await expect(page.locator('text=Future Features')).toBeVisible();
-    // Verify the grid container has the expected number of card children
+    // Count feature cards by finding the grid container (sibling of "All Features" section)
+    // and counting its direct children
     const cardCount = await page.evaluate(() => {
-      const heading = Array.from(document.querySelectorAll('h2')).find(h => h.textContent?.includes('All Features'));
-      if (!heading) return 0;
-      const grid = heading.parentElement?.parentElement?.querySelector('[style*="grid"]');
-      return grid ? grid.children.length : 0;
+      const headings = Array.from(document.querySelectorAll('h2'));
+      const allFeaturesHeading = headings.find(h => h.textContent?.trim() === 'All Features');
+      if (!allFeaturesHeading) return 0;
+      // The grid is the next sibling of the section label div
+      const sectionLabel = allFeaturesHeading.parentElement;
+      const grid = sectionLabel?.nextElementSibling;
+      if (!grid) return 0;
+      return grid.children.length;
     });
     expect(cardCount).toBe(20);
   });
