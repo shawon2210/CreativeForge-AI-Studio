@@ -26,28 +26,12 @@ A production-grade multimodal AI creative platform built with React 19, Vite 8, 
   - [Data Flow](#data-flow)
   - [Database Schema](#database-schema)
 - [Features (1–20)](#features-120)
-  - [Feature 1: Creative Memory Engine (RAG)](#feature-1-creative-memory-engine-rag)
-  - [Feature 2: AI Creative Director](#feature-2-ai-creative-director)
-  - [Feature 3: Live Canvas](#feature-3-live-canvas)
-  - [Feature 4: AI World Engine](#feature-4-ai-world-engine)
-  - [Feature 5: Emotional AI Generation](#feature-5-emotional-ai-generation)
-  - [Feature 6: AI Style Genome System](#feature-6-ai-style-genome-system)
-  - [Feature 7: AI Render Preview](#feature-7-ai-render-preview)
-  - [Feature 8: AI Asset Management](#feature-8-ai-asset-management)
-  - [Feature 9: AI Prompt-to-Product](#feature-9-ai-prompt-to-product)
-  - [Feature 10: AI Multi-Modal Fusion](#feature-10-ai-multi-modal-fusion)
-  - [Feature 11: Cinematic AI Director](#feature-11-cinematic-ai-director)
-  - [Feature 12: AI Knowledge Graph](#feature-12-ai-knowledge-graph)
-  - [Feature 13: Generative UI](#feature-13-generative-ui)
-  - [Feature 14: AI Marketplace Ecosystem](#feature-14-ai-marketplace-ecosystem)
-  - [Feature 15: AI Timeline & Versioning](#feature-15-ai-timeline--versioning)
-  - [Feature 16: Voice-Driven Creation](#feature-16-voice-driven-creation)
-  - [Feature 17: Real-Time Collaborative AI Studio](#feature-17-real-time-collaborative-ai-studio)
-  - [Feature 18: Personal AI Creative Twin](#feature-18-personal-ai-creative-twin)
-  - [Feature 19: AI Research & Inspiration Engine](#feature-19-ai-research--inspiration-engine)
-  - [Feature 20: Future-Ready Expansions](#feature-20-future-ready-expansions)
 - [Visual Node Workflow System](#visual-node-workflow-system)
 - [Deployment](#deployment)
+  - [Local Development](#local-development)
+  - [Docker Compose](#docker-compose)
+  - [Kubernetes](#kubernetes)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Future Roadmap](#future-roadmap)
 
 ---
@@ -108,7 +92,7 @@ CreativeForge/
 │   │   │   ├── main.tsx             # React 19 root entry (StrictMode)
 │   │   │   ├── index.css            # Dark theme + keyframe animations
 │   │   │   ├── components/
-│   │   │   │   ├── ui/              # Shared UI component library (inline styles)
+│   │   │   │   ├── ui/              # Shared UI component library
 │   │   │   │   │   ├── index.tsx    # Button, Card, Badge, Input, TextArea, Select, etc.
 │   │   │   │   │   ├── Toast.tsx           # Toast notification system
 │   │   │   │   │   ├── CommandPalette.tsx   # ⌘K fuzzy search command palette
@@ -137,14 +121,16 @@ CreativeForge/
 │   │   │   │   ├── research-inspiration/ # Feature 19
 │   │   │   │   ├── future-ready/    # Feature 20
 │   │   │   │   └── visual-node/     # Workflow canvas (ReactFlow)
-│   │   │   └── stores/              # Zustand state management
-│   │   │       ├── authStore.ts
-│   │   │       ├── uiStore.ts
-│   │   │       ├── generationStore.ts
-│   │   │       ├── notificationStore.ts
-│   │   │       └── canvasStore.ts
+│   │   │   ├── stores/              # Zustand state management
+│   │   │   │   ├── authStore.ts
+│   │   │   │   ├── uiStore.ts
+│   │   │   │   ├── generationStore.ts
+│   │   │   │   ├── notificationStore.ts
+│   │   │   │   └── canvasStore.ts
+│   │   │   └── tests/e2e/           # Playwright E2E tests
 │   │   ├── vite.config.ts
 │   │   ├── tsconfig.json
+│   │   ├── playwright.config.ts
 │   │   └── package.json
 │   │
 │   ├── api/                  # FastAPI + Python 3.13 backend
@@ -152,110 +138,52 @@ CreativeForge/
 │   │   ├── main_mock.py             # Mock entry (no DB required)
 │   │   ├── database.py             # SQLModel engine + session factory
 │   │   ├── models/                 # SQLModel table definitions
-│   │   │   ├── creative_memory.py   # Feature 1 (pgvector embeddings)
-│   │   │   ├── user_style_dna.py    # Feature 1 (style preferences)
-│   │   │   ├── emotion_ai.py        # Feature 5
-│   │   │   ├── style_genome.py      # Feature 6
-│   │   │   ├── render_preview.py    # Feature 7
-│   │   │   ├── asset_management.py  # Feature 8
-│   │   │   ├── prompt_to_product.py # Feature 9
-│   │   │   ├── multi_modal_fusion.py # Feature 10
-│   │   │   ├── cinematic_ai.py      # Feature 11
-│   │   │   ├── knowledge_graph.py   # Feature 12
-│   │   │   ├── generative_ui.py     # Feature 13
-│   │   │   ├── marketplace.py       # Feature 14
-│   │   │   ├── timeline_versioning.py # Feature 15
-│   │   │   ├── voice_driven.py      # Feature 16
-│   │   │   ├── collaborative_studio.py # Feature 17
-│   │   │   ├── creative_twin.py     # Feature 18
-│   │   │   ├── research_inspiration.py # Feature 19
-│   │   │   ├── future_ready.py      # Feature 20
-│   │   │   ├── world_engine.py      # Feature 4
-│   │   │   ├── generation.py        # Core generation table
-│   │   │   ├── visual_node.py       # Workflow node tables
-│   │   │   ├── co_creation.py       # Co-creation tables
-│   │   │   ├── multi_agent.py       # Multi-agent tables
-│   │   │   ├── os_core.py           # OS core tables
-│   │   │   ├── cinematic.py         # Cinematic base tables
-│   │   │   └── relationships.py     # Relationship mapper
-│   │   ├── routers/                # FastAPI route handlers
-│   │   │   ├── generations.py       # POST /generations/ (core generation)
-│   │   │   ├── style_genome.py      # Feature 6 endpoints
-│   │   │   ├── render_preview.py    # Feature 7 endpoints
-│   │   │   ├── asset_management.py  # Feature 8 endpoints
-│   │   │   ├── prompt_to_product.py # Feature 9 endpoints
-│   │   │   ├── multi_modal_fusion.py # Feature 10 endpoints
-│   │   │   ├── cinematic_ai.py      # Feature 11 endpoints
-│   │   │   ├── knowledge_graph.py   # Feature 12 endpoints
-│   │   │   ├── generative_ui.py     # Feature 13 endpoints
-│   │   │   ├── marketplace.py       # Feature 14 endpoints
-│   │   │   ├── timeline_versioning.py # Feature 15 endpoints
-│   │   │   ├── voice_driven.py      # Feature 16 endpoints
-│   │   │   ├── collaborative_studio.py # Feature 17 endpoints
-│   │   │   ├── creative_twin.py     # Feature 18 endpoints
-│   │   │   ├── research_inspiration.py # Feature 19 endpoints
-│   │   │   ├── future_ready.py      # Feature 20 endpoints
-│   │   │   ├── world_engine.py      # Feature 4 endpoints
-│   │   │   ├── emotion_ai.py        # Feature 5 endpoints
-│   │   │   ├── visual_node.py       # Workflow endpoints
-│   │   │   ├── co_creation.py       # Co-creation endpoints
-│   │   │   ├── multi_agent.py       # Multi-agent endpoints
-│   │   │   ├── os_core.py           # OS core endpoints
-│   │   │   └── relationships.py     # Relationship endpoints
+│   │   ├── routers/                # FastAPI route handlers (18 feature routers)
 │   │   └── services/               # Business logic layer
-│   │       ├── rag_service.py              # Feature 1 (RAG pipeline)
-│   │       ├── creative_director_agent.py  # Feature 2 (AI agent)
-│   │       ├── emotion_service.py          # Feature 5
-│   │       ├── style_genome_service.py     # Feature 6
-│   │       ├── render_preview_service.py   # Feature 7
-│   │       ├── asset_management_service.py # Feature 8
-│   │       ├── prompt_to_product_service.py # Feature 9
-│   │       ├── multi_modal_fusion_service.py # Feature 10
-│   │       ├── cinematic_ai_service.py     # Feature 11
-│   │       ├── knowledge_graph_service.py  # Feature 12
-│   │       ├── generative_ui_service.py    # Feature 13
-│   │       ├── marketplace_service.py      # Feature 14
-│   │       ├── timeline_versioning_service.py # Feature 15
-│   │       ├── voice_driven_service.py     # Feature 16
-│   │       ├── collaborative_studio_service.py # Feature 17
-│   │       ├── creative_twin_service.py    # Feature 18
-│   │       ├── research_inspiration_service.py # Feature 19
-│   │       ├── future_ready_service.py     # Feature 20
-│   │       ├── world_engine_service.py     # Feature 4
-│   │       ├── visual_node_service.py      # Workflow service
-│   │       ├── co_creation_service.py      # Co-creation service
-│   │       ├── multi_agent_service.py      # Multi-agent service
-│   │       ├── os_core_service.py          # OS core service
-│   │       ├── relationship_mapper.py      # Relationship mapping
-│   │       ├── prompt_utils.py             # Shared prompt utilities
-│   │       ├── shared_embedding_service.py # Shared embedding logic
-│   │       └── shared_memory_service.py    # Shared memory logic
 │   │
 │   └── workers/                # Async GPU inference workers (Celery/RQ)
 │
 ├── packages/                   # Shared packages (SDK, types)
 ├── docs/
 │   ├── architecture/           # System design docs
-│   │   ├── 01-architectural-blueprint.md
-│   │   ├── 02-production-folder-structure.md
-│   │   ├── 03-step-by-step-refactor-plan.md
-│   │   ├── 04-modern-ui-component-plan.md
-│   │   ├── 05-database-schema-design.md
-│   │   └── 06-future-roadmap.md
 │   ├── api/                    # API design docs
-│   │   └── 01-api-design.md
 │   └── deployment/             # Deployment docs
-│       ├── 01-deployment-strategy.md
-│       ├── 02-docker-setup.md
-│       └── 03-ci-cd-pipeline.md
 ├── infrastructure/
-│   ├── docker/                 # Docker Compose files
+│   ├── docker/                 # Dockerfiles + docker-compose
+│   │   ├── api.Dockerfile
+│   │   ├── web.Dockerfile
+│   │   ├── nginx.conf
+│   │   └── docker-compose.ci.yml
 │   ├── kubernetes/             # K8s manifests
+│   │   └── manifests/
+│   │       ├── namespace.yaml
+│   │       ├── secrets.yaml
+│   │       ├── kustomization.yaml
+│   │       ├── backend-deployment.yaml
+│   │       ├── backend-service.yaml
+│   │       ├── frontend-deployment.yaml
+│   │       ├── frontend-service.yaml
+│   │       ├── redis-deployment.yaml
+│   │       ├── redis-service.yaml
+│   │       ├── redis-pvc.yaml
+│   │       ├── postgres-deployment.yaml
+│   │       ├── postgres-service.yaml
+│   │       ├── postgres-pvc.yaml
+│   │       ├── gpu-workers.yaml
+│   │       ├── hpa-api.yaml
+│   │       ├── hpa-web.yaml
+│   │       ├── hpa-gpu-workers.yaml
+│   │       └── ingress.yaml
 │   ├── nginx/                  # NGINX reverse proxy config
 │   └── terraform/              # Infrastructure as Code
 ├── scripts/                    # Utility scripts
 ├── tests/                      # Test suites
+├── .github/workflows/          # CI/CD pipelines
+│   ├── ci.yml                  # Lint + unit tests
+│   ├── docker-ci.yml           # Docker CI + E2E
+│   └── k8s-deploy.yml          # Kubernetes deployment
 ├── package.json                # Root workspace config
+├── .dockerignore               # Docker build optimization
 └── README.md                   # This file
 ```
 
@@ -273,14 +201,19 @@ CreativeForge/
 | Frontend | React Router | 7.x (routing) |
 | Frontend | Three.js / Pixi.js | 3D rendering |
 | Frontend | Framer Motion | 12.x (animations) |
-| Backend | FastAPI | Latest |
+| Backend | FastAPI | 0.115+ |
 | Backend | Python | 3.13 |
-| Backend | SQLModel | (SQLAlchemy + Pydantic) |
-| Backend | Uvicorn | ASGI server |
+| Backend | SQLModel | 0.0.24+ |
+| Backend | Uvicorn | 0.30+ |
 | Database | PostgreSQL | 15+ |
 | Database | pgvector | Vector similarity search |
-| Queue | Redis | Task queue (Celery/RQ) |
+| Queue | Redis | 7.x (task queue) |
 | Auth | JWT | Bearer token auth |
+| CI/CD | GitHub Actions | — |
+| Containers | Docker + Compose | — |
+| Orchestration | Kubernetes | 1.29+ |
+| Ingress | NGINX Ingress Controller | — |
+| Monitoring | Prometheus + Grafana | — |
 
 ---
 
@@ -292,6 +225,8 @@ CreativeForge/
 - **Python** 3.13+
 - **PostgreSQL** 15+ (optional — mock mode works without it)
 - **Redis** (optional — mock mode works without it)
+- **Docker** + **Docker Compose** (for containerized deployment)
+- **kubectl** (for Kubernetes deployment)
 
 ### Running the Project
 
@@ -317,7 +252,7 @@ cd "/mnt/d/all files/Project/CreativeForge/apps/api"
 python3 main_mock.py
 ```
 
-The API will start on `http://localhost:5000`. This loads 16 feature routers with in-memory mock data — no PostgreSQL needed.
+The API will start on `http://localhost:5000`. This loads **18 feature routers** with in-memory mock data — no PostgreSQL needed.
 
 **3. Start the frontend (new terminal):**
 
@@ -383,7 +318,7 @@ The frontend uses **React Router v7** with lazy-loaded routes for optimal perfor
 
 ### State Management (Zustand Stores)
 
-Four Zustand stores manage global state:
+Five Zustand stores manage global state:
 
 **`authStore`** — User authentication state
 - `user`: User object (id, name, email, role)
@@ -413,7 +348,7 @@ Four Zustand stores manage global state:
 
 ### UI Component Library
 
-All components use **inline styles** (no Tailwind CSS — Tailwind is NOT configured). Located at `apps/web/src/components/ui/index.tsx`:
+All components use **inline styles** (no Tailwind CSS). Located at `apps/web/src/components/ui/index.tsx`:
 
 | Component | Props | Description |
 |-----------|-------|-------------|
@@ -471,7 +406,7 @@ Three breakpoints with mobile-first approach:
 - No PostgreSQL, Redis, or GPU required
 - All data stored in-memory (Python dicts)
 - Auto-progressing job statuses
-- 16 feature routers pre-loaded
+- **18 feature routers** pre-loaded (all 20 features)
 - Run: `cd apps/api && python3 main_mock.py`
 
 **Production Mode** (`main.py`):
@@ -483,23 +418,41 @@ Three breakpoints with mobile-first approach:
 
 ### API Endpoints
 
-**Core Generation:**
+**Core:**
 ```
 POST /generations/          — Create AI generation (text/image/multi-modal)
+GET  /health                — Health check
+GET  /docs                  — Swagger UI documentation
+GET  /openapi.json          — OpenAPI 3.1 spec (72 routes)
 ```
 
 **Feature 4 — World Engine:**
 ```
 POST /world-engine/worlds/                         — Create world
+GET  /world-engine/worlds/{id}                     — Get world by ID
 POST /world-engine/worlds/{id}/characters/         — Add character
+GET  /world-engine/worlds/{id}/characters/         — List characters
+POST /world-engine/worlds/{id}/locations/          — Add location
+GET  /world-engine/worlds/{id}/locations/          — List locations
+POST /world-engine/worlds/{id}/timeline-events/    — Add timeline event
+GET  /world-engine/worlds/{id}/timeline-events/    — List timeline events
+POST /world-engine/worlds/{id}/lore-entries/       — Add lore entry
+GET  /world-engine/worlds/{id}/lore-entries/       — List lore entries
+POST /world-engine/worlds/{id}/generate-timeline/  — Auto-generate timeline from lore
 GET  /world-engine/worlds/{id}/relationship-graph/ — Get relationship graph
 GET  /world-engine/worlds/{id}/validate-continuity/ — Story continuity check
+POST /world-engine/characters/{id}/check-consistency/ — Check character consistency
+GET  /world-engine/characters/{id}/consistency-report/ — Get consistency report
+POST /world-engine/characters/{id}/validate-generation/ — Validate generation traits
+POST /world-engine/timeline-events/check-consistency/   — Check timeline consistency
 ```
 
 **Feature 5 — Emotion AI:**
 ```
-POST /emotion/analyze/      — Analyze prompt emotion
-POST /emotion/map-visuals/  — Get visual params for emotion
+POST /emotion/analyze/       — Analyze prompt emotion
+POST /emotion/map-visuals/   — Get visual params for emotion
+GET  /emotion/profile/{id}   — Get user emotion profile
+POST /emotion/profile/update/ — Update emotion profile
 POST /emotion/generation/    — Attach emotion to generation
 ```
 
@@ -512,15 +465,15 @@ POST /style-genome/evolve/   — Evolve style based on feedback
 
 **Feature 7 — Render Preview:**
 ```
-POST /render-preview/jobs/           — Create render job
-GET  /render-preview/jobs/{job_id}   — Get job status
-GET  /render-preview/jobs/{job_id}/preview/ — Get render preview
+POST /render-preview/jobs/                    — Create render job
+GET  /render-preview/jobs/{job_id}            — Get job status
+GET  /render-preview/jobs/{job_id}/preview/   — Get render preview
 ```
 
 **Feature 8 — Asset Management:**
 ```
 POST /asset-management/assets/                    — Upload asset
-GET  /asset-management/assets/                    — List assets
+GET  /asset-management/assets/?user_id={id}       — List assets
 POST /asset-management/assets/{asset_id}/tags/    — Add tag
 POST /asset-management/collections/               — Create collection
 POST /asset-management/collections/{id}/assets/   — Add asset to collection
@@ -528,23 +481,23 @@ POST /asset-management/collections/{id}/assets/   — Add asset to collection
 
 **Feature 9 — Prompt-to-Product:**
 ```
-POST /prompt-to-product/templates/          — Create template
-POST /prompt-to-product/generate/           — Generate product from prompt
-POST /prompt-to-product/products/{id}/iterate/ — Iterate on product
-GET  /prompt-to-product/products/           — List user products
+POST /prompt-to-product/templates/                   — Create template
+POST /prompt-to-product/generate/                    — Generate product from prompt
+POST /prompt-to-product/products/{id}/iterate/       — Iterate on product
+GET  /prompt-to-product/products/?user_id={id}       — List user products
 ```
 
 **Feature 10 — Multi-Modal Fusion:**
 ```
 POST /multi-modal-fusion/jobs/       — Create fusion job
 GET  /multi-modal-fusion/jobs/{id}   — Get job status
-GET  /multi-modal-fusion/jobs/       — List user jobs
+GET  /multi-modal-fusion/jobs/?user_id={id} — List user jobs
 ```
 
 **Feature 11 — Cinematic AI:**
 ```
 POST /cinematic-ai/scenes/                — Create scene
-GET  /cinematic-ai/scenes/                — List user scenes
+GET  /cinematic-ai/scenes/?user_id={id}   — List user scenes
 PUT  /cinematic-ai/scenes/{id}/status/    — Update scene status
 ```
 
@@ -553,7 +506,7 @@ PUT  /cinematic-ai/scenes/{id}/status/    — Update scene status
 POST /knowledge-graph/entities/              — Create entity
 POST /knowledge-graph/relations/             — Create relation
 POST /knowledge-graph/graphs/                — Create graph
-GET  /knowledge-graph/graphs/                — List user graphs
+GET  /knowledge-graph/graphs/?user_id={id}   — List user graphs
 GET  /knowledge-graph/graphs/{id}/entities/  — Get graph entities
 GET  /knowledge-graph/entities/{id}/relations/ — Get entity relations
 ```
@@ -561,8 +514,9 @@ GET  /knowledge-graph/entities/{id}/relations/ — Get entity relations
 **Feature 13 — Generative UI:**
 ```
 POST /generative-ui/uis/                — Create UI
-GET  /generative-ui/uis/                — List user UIs
+GET  /generative-ui/uis/?user_id={id}   — List user UIs
 GET  /generative-ui/uis/{id}/components/ — Get UI components
+PUT  /generative-ui/uis/{id}/status/     — Update UI status
 ```
 
 **Feature 14 — Marketplace:**
@@ -571,13 +525,14 @@ POST /marketplace/items/          — Create marketplace item
 GET  /marketplace/items/          — List items
 POST /marketplace/transactions/   — Purchase item
 POST /marketplace/reviews/        — Add review
+GET  /marketplace/items/{id}/reviews/ — Get item reviews
 ```
 
 **Feature 15 — Timeline & Versioning:**
 ```
 POST /timeline/events/                  — Create timeline event
 POST /timeline/versions/                — Create version record
-GET  /timeline/events/                  — Get project timeline
+GET  /timeline/events/?project_id={id}  — Get project timeline
 GET  /timeline/events/{id}/versions/    — Get version history
 ```
 
@@ -611,7 +566,7 @@ POST /research/topics/              — Create research topic
 POST /research/papers/              — Add paper to topic
 POST /research/inspirations/        — Create inspiration source
 GET  /research/topics/{id}/         — Get topic with papers
-GET  /research/inspirations/        — Get user inspirations
+GET  /research/inspirations/?user_id={id} — Get user inspirations
 ```
 
 **Feature 20 — Future-Ready:**
@@ -685,15 +640,6 @@ Retrieval-Augmented Generation system that stores and retrieves creative context
 - `apps/api/models/creative_memory.py` — CreativeMemory table (pgvector Vector(384))
 - `apps/api/models/user_style_dna.py` — UserStyleDNA table
 - `apps/api/services/rag_service.py` — Embedding + retrieval pipeline
-- `apps/api/services/shared_embedding_service.py` — Shared embedding logic
-- `apps/api/services/shared_memory_service.py` — Shared memory operations
-
-**Working flow:**
-1. User submits a prompt via `/generations/`
-2. RAG service embeds the prompt and queries pgvector for similar past memories
-3. Top-K similar memories are injected into the enhanced prompt
-4. Generation proceeds with personalized context
-5. New result is embedded and stored for future retrieval
 
 ---
 
@@ -710,14 +656,7 @@ An agent system that analyzes prompts, detects weaknesses, and suggests improvem
 
 **Key files:**
 - `apps/api/services/creative_director_agent.py` — Main agent with dual mock/prod mode
-- `apps/api/services/prompt_utils.py` — Shared `detect_weak_prompt()` and `suggest_prompt_improvements()`
-
-**Working flow:**
-1. POST `/generations/` with `{ "prompt": "...", "user_id": "..." }`
-2. Agent analyzes intent, detects weaknesses, generates suggestions
-3. Enhanced prompt returned in `agent_analysis` field
-4. In mock mode: rule-based analysis (no LLM calls)
-5. In prod mode: LLM-powered analysis with full reasoning
+- `apps/api/services/prompt_utils.py` — Shared prompt analysis utilities
 
 ---
 
@@ -734,7 +673,6 @@ Real-time collaborative canvas with co-creation preview.
 **Key files:**
 - `apps/api/services/co_creation_service.py` — Co-creation logic
 - `apps/api/routers/co_creation.py` — Co-creation endpoints
-- `apps/api/models/co_creation.py` — Co-creation tables
 
 ---
 
@@ -745,10 +683,14 @@ Build and manage consistent story worlds with character tracking and continuity 
 **How it works:**
 - Create worlds with descriptions and metadata
 - Add characters with attributes and relationships
+- Define locations with parent-child hierarchies
+- Create timeline events linked to characters and locations
+- Add lore entries with categories and tags
 - Generate relationship graphs (character → character connections)
 - Validate story continuity (detect plot holes, timeline inconsistencies)
+- Auto-generate timeline events from existing lore
 
-**Endpoints:** `POST/GET /world-engine/worlds/`, `POST /world-engine/worlds/{id}/characters/`, `GET /world-engine/worlds/{id}/relationship-graph/`, `GET /world-engine/worlds/{id}/validate-continuity/`
+**Endpoints:** 13 REST endpoints covering worlds, characters, locations, timeline events, lore, and validation
 
 **Frontend:** `WorldDashboard.tsx` — Create worlds, view character list, relationship graph visualization
 
@@ -764,7 +706,7 @@ Map emotions to visual generation parameters for mood-aware AI output.
 - Track user emotion preferences over time
 - Apply emotion parameters to generation pipeline
 
-**Endpoints:** `POST /emotion/analyze/`, `POST /emotion/map-visuals/`, `POST /emotion/generation/`
+**Endpoints:** `POST /emotion/analyze/`, `POST /emotion/map-visuals/`, `POST /emotion/generation/`, `GET /emotion/profile/{id}`, `POST /emotion/profile/update/`
 
 **Frontend:** `EmotionSliders.tsx` — 6 emotion sliders (happy, sad, angry, nostalgic, fear, calm) with 0–1 intensity
 
@@ -812,7 +754,7 @@ Organize, tag, and collect creative assets.
 - Filter assets by type, tags, date
 - Add/remove tags from existing assets
 
-**Endpoints:** `POST /asset-management/assets/`, `GET /asset-management/assets/`, `POST /asset-management/assets/{id}/tags/`, `POST /asset-management/collections/`, `POST /asset-management/collections/{id}/assets/`
+**Endpoints:** `POST /asset-management/assets/`, `GET /asset-management/assets/`, `POST /asset-management/assets/{id}/tags/`, `POST /asset-management/collections/`
 
 **Frontend:** `AssetManagement.tsx` — Asset grid, tag management, collection creation
 
@@ -828,7 +770,7 @@ Turn prompts into products with iterative refinement.
 - Iterate on products (refine, modify, improve)
 - Track iteration history per product
 
-**Endpoints:** `POST /prompt-to-product/templates/`, `POST /prompt-to-product/generate/`, `POST /prompt-to-product/products/{id}/iterate/`, `GET /prompt-to-product/products/`
+**Endpoints:** `POST /prompt-to-product/templates/`, `POST /prompt-to-product/generate/`, `POST /prompt-to-product/products/{id}/iterate/`
 
 **Frontend:** `PromptToProduct.tsx` — Template builder, product generator, iteration history
 
@@ -876,7 +818,7 @@ Entity-relation knowledge base with graph visualization.
 - Group entities into named knowledge graphs
 - Query entities and their relations
 
-**Endpoints:** `POST /knowledge-graph/entities/`, `POST /knowledge-graph/relations/`, `POST /knowledge-graph/graphs/`, `GET /knowledge-graph/graphs/`, `GET /knowledge-graph/graphs/{id}/entities/`, `GET /knowledge-graph/entities/{id}/relations/`
+**Endpoints:** `POST /knowledge-graph/entities/`, `POST /knowledge-graph/relations/`, `POST /knowledge-graph/graphs/`, `GET /knowledge-graph/graphs/`
 
 **Frontend:** `KnowledgeGraph.tsx` — Entity creator, relation builder, graph visualizer
 
@@ -957,7 +899,7 @@ Multi-user real-time collaboration with WebRTC support.
 - Retrieve full session state (users + updates)
 - PeerJS signaling server for WebRTC (port 9000)
 
-**Endpoints:** `POST /collaborative-studio/sessions/`, `POST /collaborative-studio/sessions/join/`, `POST /collaborative-studio/updates/`, `GET /collaborative-studio/sessions/{id}/`
+**Endpoints:** `POST /collaborative-studio/sessions/`, `POST /collaborative-studio/sessions/join/`, `POST /collaborative-studio/updates/`
 
 **Frontend:** `CollaborativeStudio.tsx` — Session creator, join flow, live update feed
 
@@ -989,7 +931,7 @@ Track AI research papers and inspiration sources.
 - Track inspiration sources (artists, styles, references)
 - Retrieve topics with associated papers
 
-**Endpoints:** `POST /research/topics/`, `POST /research/papers/`, `POST /research/inspirations/`, `GET /research/topics/{id}/`, `GET /research/inspirations/`
+**Endpoints:** `POST /research/topics/`, `POST /research/papers/`, `POST /research/inspirations/`, `GET /research/topics/{id}/`
 
 **Frontend:** `ResearchInspiration.tsx` — Topic manager, paper library, inspiration board
 
@@ -1005,7 +947,7 @@ Platform roadmap and expansion planning tool.
 - Create expansion plans with detailed descriptions
 - View all features with their roadmap status
 
-**Endpoints:** `POST /future-ready/features/`, `POST /future-ready/roadmap/`, `POST /future-ready/expansion-plans/`, `GET /future-ready/features/`, `GET /future-ready/features/{id}/`
+**Endpoints:** `POST /future-ready/features/`, `POST /future-ready/roadmap/`, `POST /future-ready/expansion-plans/`, `GET /future-ready/features/`
 
 **Frontend:** `FutureReady.tsx` — Roadmap view, feature planner, expansion tracker
 
@@ -1062,6 +1004,7 @@ A ReactFlow-based drag-and-drop pipeline builder for chaining AI operations.
 Three deployment modes supported:
 
 ### Local Development
+
 ```bash
 # Backend (mock mode)
 cd apps/api && python3 main_mock.py
@@ -1070,39 +1013,94 @@ cd apps/api && python3 main_mock.py
 npx vite apps/web --port 3000 --host 0.0.0.0
 ```
 
-### Docker Compose (Local Production)
-```bash
-docker-compose -f infrastructure/docker/docker-compose.prod.yml up -d
-```
-- Frontend: Nginx serving static Vite build
-- Backend: Gunicorn + Uvicorn workers
-- Database: PostgreSQL with persistent volume
-- Redis: Redis with persistence
-- NGINX reverse proxy + HTTPS
+### Docker Compose
 
-### Cloud (AWS/GCP Kubernetes)
 ```bash
-# Infrastructure as Code
-cd infrastructure/terraform && terraform apply
+# Full stack with PostgreSQL + Redis
+docker compose -f infrastructure/docker/docker-compose.ci.yml up -d --build
 
-# Kubernetes deployment
-kubectl apply -f infrastructure/kubernetes/
+# Check status
+docker compose -f infrastructure/docker/docker-compose.ci.yml ps
+
+# View logs
+docker compose -f infrastructure/docker/docker-compose.ci.yml logs -f api
+
+# Stop everything
+docker compose -f infrastructure/docker/docker-compose.ci.yml down -v
 ```
-- Frontend: S3/Cloud Storage + CDN
-- Backend: Kubernetes Deployment with HPA
-- Workers: Separate GPU node pool
-- Database: RDS/multi-AZ PostgreSQL
-- Cache/Queue: ElastiCache/Memorystore Redis
-- Monitoring: Prometheus + Grafana
+
+**Services:**
+- Frontend: Nginx serving static Vite build (port 3000)
+- Backend: FastAPI with mock mode (port 5000)
+- Redis: Task queue (port 6379)
+- PostgreSQL: Persistent storage (port 5432)
+
+### Kubernetes
+
+```bash
+# Apply all manifests via Kustomize
+kubectl apply -k infrastructure/kubernetes/manifests/
+
+# Or apply individually
+kubectl apply -f infrastructure/kubernetes/manifests/namespace.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/secrets.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/postgres-deployment.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/redis-deployment.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/backend-deployment.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/frontend-deployment.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/gpu-workers.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/ingress.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/hpa-api.yaml
+kubectl apply -f infrastructure/kubernetes/manifests/hpa-web.yaml
+
+# Check status
+kubectl get all -n creativeforge
+kubectl get hpa -n creativeforge
+kubectl get ingress -n creativeforge
+
+# Port-forward for local testing
+kubectl port-forward svc/creativeforge-api-service 5000:5000 -n creativeforge
+kubectl port-forward svc/creativeforge-web-service 3000:80 -n creativeforge
+
+# View logs
+kubectl logs -l app=creativeforge-api -n creativeforge -f
+
+# Rollback
+kubectl rollout undo deployment/creativeforge-api -n creativeforge
+```
 
 **Scaling:**
-- API pods: HPA at CPU >70%, max 20 pods
-- Worker pods: HPA at queue length >100, max 50 GPU pods
+- API pods: HPA at CPU >70%, 3-10 replicas
+- Web pods: HPA at CPU >75%, 2-6 replicas
+- GPU workers: HPA at CPU >80%, 1-5 replicas
 - Database: Read replicas + PgBouncer connection pooling
 - Redis: Cluster mode, 100k ops/sec
 
 **Rollout:** Blue-Green deployment with canary releases (10% → 100%)
-**Rollback:** `kubectl rollout undo deployment/creativeforge-api`
+
+---
+
+## CI/CD Pipeline
+
+Three GitHub Actions workflows:
+
+### 1. CI (`.github/workflows/ci.yml`)
+- Triggers: push to main/develop, PRs to main
+- Matrix: Node 20/22 × Python 3.12/3.13
+- Steps: lint, unit tests, build
+
+### 2. Docker CI (`.github/workflows/docker-ci.yml`)
+- Triggers: push to main/develop, PRs to main
+- Jobs:
+  - **lint-and-test**: Same as CI
+  - **docker-build**: Build API + Web images
+  - **docker-e2e**: Full stack integration + Playwright E2E tests (29 tests) + API smoke tests
+
+### 3. Kubernetes Deploy (`.github/workflows/k8s-deploy.yml`)
+- Triggers: push to main only
+- Jobs:
+  - **build-and-push**: Build + push images to GHCR (latest + sha tags)
+  - **deploy**: Rolling update to K8s cluster, health checks, smoke tests, auto-rollback
 
 ---
 
@@ -1138,5 +1136,17 @@ kubectl apply -f infrastructure/kubernetes/
 - Pro: $29/month (unlimited, priority queue)
 - Team: $99/month (5 seats, team workflows)
 - Enterprise: Custom pricing (on-premise, SSO, SLA)
-#   C r e a t i v e F o r g e - A I - S t u d i o  
- 
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## Support
+
+For issues and feature requests, please use the [GitHub Issues](https://github.com/shawon2210/CreativeForge-AI-Studio/issues) page.
