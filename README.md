@@ -1138,3 +1138,5 @@ kubectl apply -f infrastructure/kubernetes/
 - Pro: $29/month (unlimited, priority queue)
 - Team: $99/month (5 seats, team workflows)
 - Enterprise: Custom pricing (on-premise, SSO, SLA)
+#   C r e a t i v e F o r g e - A I - S t u d i o  
+ 
