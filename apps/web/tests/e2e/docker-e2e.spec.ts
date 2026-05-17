@@ -10,13 +10,14 @@ test.describe('CreativeForge Docker E2E', () => {
   // ============================================================
   test('Dashboard loads', async ({ page }) => {
     await page.goto(BASE_URL);
-    await expect(page.locator('h1')).toContainText('Welcome');
+    await expect(page.locator('h1').first()).toContainText('Welcome');
     await expect(page.locator('text=All Features')).toBeVisible();
   });
 
   test('All 20 feature cards visible on dashboard', async ({ page }) => {
     await page.goto(BASE_URL);
-    const cards = page.locator('text=All Features').locator('..').locator('[style*="cursor"]');
+    // Feature cards are inside the grid below "All Features" heading
+    const cards = page.locator('text=All Features').locator('..').locator('..').locator('[style*="cursor: pointer"]');
     await expect(cards).toHaveCount(20, { timeout: 10000 });
   });
 
@@ -25,92 +26,92 @@ test.describe('CreativeForge Docker E2E', () => {
   // ============================================================
   test('World Engine page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/world-engine`);
-    await expect(page.locator('h1')).toContainText('World Engine');
+    await expect(page.getByRole('heading', { name: 'World Engine', exact: true })).toBeVisible();
   });
 
   test('Emotion AI page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/emotion-ai`);
-    await expect(page.locator('h1')).toContainText('Emotion AI');
+    await expect(page.getByRole('heading', { name: 'Emotion AI', exact: true })).toBeVisible();
   });
 
   test('Style Genome page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/style-genome`);
-    await expect(page.locator('h1')).toContainText('Style Genome');
+    await expect(page.getByRole('heading', { name: 'Style Genome', exact: true })).toBeVisible();
   });
 
   test('Render Preview page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/render-preview`);
-    await expect(page.locator('h1')).toContainText('Render Preview');
+    await expect(page.getByRole('heading', { name: 'Render Preview', exact: true }).first()).toBeVisible();
   });
 
   test('Asset Management page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/asset-management`);
-    await expect(page.locator('h1')).toContainText('Asset');
+    await expect(page.getByRole('heading', { name: 'Asset Management', exact: true })).toBeVisible();
   });
 
   test('Prompt to Product page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/prompt-to-product`);
-    await expect(page.locator('h1')).toContainText('Prompt');
+    await expect(page.getByRole('heading', { name: 'Prompt → Product', exact: true })).toBeVisible();
   });
 
   test('Multi-Modal page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/multi-modal`);
-    await expect(page.locator('h1')).toContainText('Multi-Modal');
+    await expect(page.getByRole('heading', { name: 'Multi-Modal Fusion', exact: true }).first()).toBeVisible();
   });
 
   test('Cinematic AI page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/cinematic-ai`);
-    await expect(page.locator('h1')).toContainText('Cinematic');
+    await expect(page.getByRole('heading', { name: 'Cinematic AI', exact: true })).toBeVisible();
   });
 
   test('Knowledge Graph page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/knowledge-graph`);
-    await expect(page.locator('h1')).toContainText('Knowledge');
+    await expect(page.getByRole('heading', { name: 'Knowledge Graph', exact: true })).toBeVisible();
   });
 
   test('Generative UI page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/generative-ui`);
-    await expect(page.locator('h1')).toContainText('Generative UI');
+    await expect(page.getByRole('heading', { name: 'Generative UI', exact: true }).first()).toBeVisible();
   });
 
   test('Marketplace page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/marketplace`);
-    await expect(page.locator('h1')).toContainText('Marketplace');
+    await expect(page.getByRole('heading', { name: 'Marketplace', exact: true })).toBeVisible();
   });
 
   test('Timeline page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/timeline`);
-    await expect(page.locator('h1')).toContainText('Timeline');
+    await expect(page.getByRole('heading', { name: 'Timeline & Versioning', exact: true })).toBeVisible();
   });
 
   test('Voice Driven page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/voice-driven`);
-    await expect(page.locator('h1')).toContainText('Voice');
+    await expect(page.getByRole('heading', { name: 'Voice Creation', exact: true }).first()).toBeVisible();
   });
 
   test('Collaboration page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/collaboration`);
-    await expect(page.locator('h1')).toContainText('Collab');
+    await expect(page.getByRole('heading', { name: 'Collaborative Studio', exact: true })).toBeVisible();
   });
 
   test('Creative Twin page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/creative-twin`);
-    await expect(page.locator('h1')).toContainText('Twin');
+    await expect(page.getByRole('heading', { name: 'AI Creative Twin', exact: true }).first()).toBeVisible();
   });
 
   test('Research page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/research`);
-    await expect(page.locator('h1')).toContainText('Research');
+    await expect(page.getByRole('heading', { name: 'Research & Inspiration', exact: true })).toBeVisible();
   });
 
   test('Future page loads', async ({ page }) => {
     await page.goto(`${BASE_URL}/future`);
-    await expect(page.locator('h1')).toContainText('Future');
+    await expect(page.getByRole('heading', { name: 'Future Ready', exact: true })).toBeVisible();
   });
 
   test('Workflow page loads with ReactFlow', async ({ page }) => {
     await page.goto(`${BASE_URL}/workflow`);
-    await expect(page.locator('h1')).toContainText('Workflow');
+    await expect(page.getByRole('heading', { name: 'Visual Workflow', exact: true })).toBeVisible();
     await expect(page.locator('text=Node Palette')).toBeVisible();
   });
 
@@ -184,13 +185,13 @@ test.describe('CreativeForge Docker E2E', () => {
   // ============================================================
   test('Full navigation flow: Dashboard -> World Engine -> Back', async ({ page }) => {
     await page.goto(BASE_URL);
-    await expect(page.locator('h1')).toContainText('Welcome');
+    await expect(page.locator('h1').first()).toContainText('Welcome');
 
     await page.click('text=World Engine');
-    await expect(page.locator('h1')).toContainText('World Engine');
+    await expect(page.getByRole('heading', { name: 'World Engine', exact: true })).toBeVisible();
 
     await page.click('text=Back');
-    await expect(page.locator('h1')).toContainText('Welcome');
+    await expect(page.locator('h1').first()).toContainText('Welcome');
   });
 
   test('API CORS headers present', async ({ request }) => {

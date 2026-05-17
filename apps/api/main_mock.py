@@ -36,6 +36,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "mode": "mock"}
+
 @app.post("/generations/")
 async def create_generation(
     prompt: str = Body(...),
