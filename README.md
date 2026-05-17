@@ -2,9 +2,7 @@
 
 A production-grade multimodal AI creative platform built with React 19, Vite 8, TypeScript, FastAPI, and Python 3.13. Features 20 AI-powered creative tools unified under a dark-themed dashboard with real-time workflows, node-based pipeline building, and dual mock/production execution modes.
 
-**Live URL**: http://localhost:3000 (frontend) | http://localhost:5000 (API)
 
----
 
 ## Table of Contents
 
@@ -1138,5 +1136,6 @@ kubectl apply -f infrastructure/kubernetes/
 - Pro: $29/month (unlimited, priority queue)
 - Team: $99/month (5 seats, team workflows)
 - Enterprise: Custom pricing (on-premise, SSO, SLA)
-#   C r e a t i v e F o r g e - A I - S t u d i o  
+#   C r e a t i v e F o r g e - A I - S t u d i o 
+ 
  
