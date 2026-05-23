@@ -1,9 +1,10 @@
 import os
+import sys; sys.path.append(str(__file__ + "/../../"))
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ..models.os_core import SharedMemory
+from models.os_core import SharedMemory
 
 MODE = os.getenv("CREATIVEFORGE_MODE", "mock")
 

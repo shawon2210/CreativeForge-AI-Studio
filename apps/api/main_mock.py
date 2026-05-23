@@ -5,8 +5,8 @@ sys.path.append(str(Path(__file__).parent))  # Add apps/api to Python path
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
 # Include all feature routers for mock testing
-# Routers that import sqlmodel-dependent services are wrapped in try/except
 from routers.style_genome import router as style_router
 from routers.render_preview import router as render_router
 from routers.asset_management import router as asset_router
@@ -22,8 +22,65 @@ from routers.collaborative_studio import router as collab_router
 from routers.creative_twin import router as twin_router
 from routers.research_inspiration import router as research_router
 from routers.future_ready import router as future_router
-from routers.world_engine import router as world_router
-from routers.emotion_ai import router as emotion_router
+
+# Routers that use relative imports — wrapped in try/except
+try:
+    from routers.co_creation import router as co_creation_router
+except (ImportError, ModuleNotFoundError):
+    co_creation_router = None
+
+try:
+    from routers.multi_agent import router as multi_agent_router
+except (ImportError, ModuleNotFoundError):
+    multi_agent_router = None
+
+try:
+    from routers.os_core import router as os_core_router
+except (ImportError, ModuleNotFoundError):
+    os_core_router = None
+
+try:
+    from routers.visual_node import router as visual_node_router
+except (ImportError, ModuleNotFoundError):
+    visual_node_router = None
+
+try:
+    from routers.relationships import router as relationships_router
+except (ImportError, ModuleNotFoundError):
+    relationships_router = None
+
+# Workflow sub-routers
+try:
+    from routers.workflow.save import router as workflow_save_router
+except (ImportError, ModuleNotFoundError):
+    workflow_save_router = None
+
+try:
+    from routers.workflow.execute import router as workflow_execute_router
+except (ImportError, ModuleNotFoundError):
+    workflow_execute_router = None
+
+try:
+    from routers.workflow.nodes import router as workflow_nodes_router
+except (ImportError, ModuleNotFoundError):
+    workflow_nodes_router = None
+
+try:
+    from routers.workflow.validate import router as workflow_validate_router
+except (ImportError, ModuleNotFoundError):
+    workflow_validate_router = None
+
+# World Engine - wrapped for mock mode (sqlmodel not installed)
+try:
+    from routers.world_engine import router as world_router
+except (ImportError, ModuleNotFoundError):
+    world_router = None
+
+# Emotion AI - wrapped for mock mode (sqlmodel not installed)
+try:
+    from routers.emotion_ai import router as emotion_router
+except (ImportError, ModuleNotFoundError):
+    emotion_router = None
 
 app = FastAPI(title="CreativeForge API - Mock Mode")
 
@@ -48,7 +105,6 @@ async def create_generation(
     intensity: float = Body(default=0.5)
 ):
     """Mock generation endpoint - no database required"""
-    # Mock agent analysis
     agent_analysis = {
         "original_prompt": prompt,
         "intent": {"subject": "unknown", "genre": "unknown", "style": "unknown"},
@@ -63,18 +119,15 @@ async def create_generation(
         },
         "enhanced_prompt": f"[Enhanced] {prompt} with cinematic lighting and neon atmosphere"
     }
-    
-    # Add emotion parameters (mock - no external service needed)
+
     try:
         from services.emotion_service import map_emotion_to_visual_params
         visual_params = map_emotion_to_visual_params(emotion, intensity)
     except (ImportError, AttributeError):
-        # Mock emotion parameters if service not available
         visual_params = {"saturation": 1.2, "brightness": 0.9, "contrast": 1.1}
-    
+
     agent_analysis["emotion"] = {"emotion": emotion, "intensity": intensity, "visual_params": visual_params}
 
-    # Add style DNA parameters (mock - no external service needed)
     try:
         from services.style_genome_service import get_user_style_dna
         style_dna = get_user_style_dna(user_id=user_id)
@@ -86,10 +139,8 @@ async def create_generation(
         else:
             agent_analysis["style_dna"] = {"applied": False, "message": "No style DNA found"}
     except (ImportError, AttributeError):
-        # Mock style DNA if service not available
         agent_analysis["style_dna"] = {"applied": False, "message": "Mock mode - style DNA service not available"}
-    
-    # Add multi-agent collaboration (mock)
+
     agent_analysis["multi_agent"] = {
         "director": {"enhanced_prompt": f"[Director] {prompt}"},
         "writer": {"narrative": "Mock narrative structure"},
@@ -98,14 +149,13 @@ async def create_generation(
         "consistency": {"is_consistent": True},
         "prompt_engineer": {"optimized_prompt": f"[Engineered] {prompt}"}
     }
-    
-    # Add co-creation live preview (mock)
+
     agent_analysis["co_creation"] = {
         "live_preview": f"https://mock.example.com/preview?text={prompt[:20]}",
         "predicted_intent": {"subject": "unknown", "genre": "unknown"},
         "suggestions": [prompt + " with neon lights", prompt + " in dystopian city"]
     }
-    
+
     return {
         "original_prompt": prompt,
         "agent_analysis": agent_analysis,
@@ -114,7 +164,30 @@ async def create_generation(
         "similar_memories_count": 0
     }
 
-# Include Style Genome, Render Preview, Asset Management, Prompt-to-Product, Multi-Modal Fusion, Cinematic AI, Knowledge Graph, Generative UI, Marketplace, Timeline, Voice-Driven, Collaborative Studio, Creative Twin, Research & Inspiration, and Future-Ready routers (others require sqlalchemy)
+
+# ── Unified Orchestrator ───────────────────────────────────────────
+from services.orchestrator import CreativeForgeOrchestrator
+
+@app.post("/pipeline/")
+async def run_pipeline(
+    prompt: str = Body(...),
+    user_id: str = Body(default="mock_user_123"),
+    options: dict = Body(default={}),
+):
+    """Run the full integrated pipeline across all 23 features"""
+    orchestrator = CreativeForgeOrchestrator(user_id=user_id)
+    result = await orchestrator.process(prompt, options)
+    return result
+
+
+@app.get("/pipeline/status/{pipeline_id}")
+async def get_pipeline_status(pipeline_id: str):
+    """Get status of a pipeline run"""
+    return {"pipeline_id": pipeline_id, "status": "completed", "mode": "mock"}
+
+
+# ── Register all routers ───────────────────────────────────────────
+# Core feature routers (always included)
 app.include_router(style_router)
 app.include_router(render_router)
 app.include_router(asset_router)
@@ -130,8 +203,30 @@ app.include_router(collab_router)
 app.include_router(twin_router)
 app.include_router(research_router)
 app.include_router(future_router)
-app.include_router(world_router)
-app.include_router(emotion_router)
+
+# Conditionally included routers
+if co_creation_router:
+    app.include_router(co_creation_router)
+if multi_agent_router:
+    app.include_router(multi_agent_router)
+if os_core_router:
+    app.include_router(os_core_router)
+if visual_node_router:
+    app.include_router(visual_node_router)
+if relationships_router:
+    app.include_router(relationships_router)
+if workflow_save_router:
+    app.include_router(workflow_save_router)
+if workflow_execute_router:
+    app.include_router(workflow_execute_router)
+if workflow_nodes_router:
+    app.include_router(workflow_nodes_router)
+if workflow_validate_router:
+    app.include_router(workflow_validate_router)
+if world_router is not None:
+    app.include_router(world_router)
+if emotion_router is not None:
+    app.include_router(emotion_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

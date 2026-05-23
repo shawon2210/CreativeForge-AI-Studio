@@ -2,70 +2,91 @@ import React from 'react';
 
 interface NodePaletteProps {
   onDragStart: (event: React.DragEvent, nodeType: string) => void;
+  isMobile?: boolean;
 }
 
-const NodePalette: React.FC<NodePaletteProps> = ({ onDragStart }) => {
+const NodePalette: React.FC<NodePaletteProps> = ({ onDragStart, isMobile }) => {
   const nodeTypes = [
-    { type: 'start', label: 'Start', color: '#667eea', icon: '▶️' },
-    { type: 'text_gen', label: 'Text Generation', color: '#2196F3', icon: '📝' },
-    { type: 'image_gen', label: 'Image Generation', color: '#FF9800', icon: '🖼️' },
-    { type: 'canvas', label: 'CreativeForge Canvas', color: '#9C27B0', icon: '🎨' },
-    { type: 'output', label: 'Output', color: '#667eea', icon: '💾' }
+    { type: 'start', label: 'Start', color: '#6366f1', icon: '▶', desc: 'Workflow entry point' },
+    { type: 'text_gen', label: 'Text Generation', color: '#3b82f6', icon: '✦', desc: 'AI text generation' },
+    { type: 'image_gen', label: 'Image Generation', color: '#f59e0b', icon: '🖼', desc: 'AI image generation' },
+    { type: 'canvas', label: 'Canvas', color: '#8b5cf6', icon: '🎨', desc: 'Process & combine' },
+    { type: 'output', label: 'Output', color: '#10b981', icon: '💾', desc: 'Final output node' },
   ];
 
   return (
     <div style={{
-      padding: '15px',
-      background: 'white',
-      borderRight: '1px solid #dee2e6',
-      width: '250px',
+      padding: isMobile ? 12 : 15,
+      background: '#0e0e18',
       height: '100%',
       overflowY: 'auto',
-      boxShadow: '2px 0 4px rgba(0,0,0,0.05)'
     }}>
-      <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#495057' }}>Node Palette</h3>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {nodeTypes.map(node => (
+      <h3 style={{
+        marginTop: 0, marginBottom: 12, color: '#f1f5f9',
+        fontSize: isMobile ? 14 : 15, fontWeight: 600,
+      }}>
+        Node Palette
+      </h3>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {nodeTypes.map((node) => (
           <div
             key={node.type}
             draggable
             onDragStart={(e) => onDragStart(e, node.type)}
             style={{
-              padding: '12px',
-              background: 'white',
-              border: `2px solid ${node.color}`,
-              borderRadius: '8px',
+              padding: '10px 12px',
+              background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${node.color}33`,
+              borderRadius: 8,
               cursor: 'grab',
-              transition: 'all 0.2s ease',
-              userSelect: 'none'
+              transition: 'all 150ms ease',
+              userSelect: 'none',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+              e.currentTarget.style.background = `${node.color}15`;
+              e.currentTarget.style.borderColor = `${node.color}66`;
+              e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              e.currentTarget.style.borderColor = `${node.color}33`;
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.2em' }}>{node.icon}</span>
-              <span style={{ fontWeight: 'bold', color: node.color }}>{node.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: `${node.color}20`,
+                border: `1px solid ${node.color}40`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12,
+              }}>
+                {node.icon}
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 12 }}>{node.label}</div>
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>{node.desc}</div>
+              </div>
             </div>
-            <div style={{ fontSize: '0.8em', color: '#6c757d', marginTop: '5px' }}>
+            <div style={{ fontSize: 10, color: '#475569', marginTop: 6, textAlign: 'center' }}>
               Drag to canvas
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: '20px', padding: '10px', background: '#f8f9fa', borderRadius: '6px' }}>
-        <h4 style={{ fontSize: '0.9em', marginTop: 0, color: '#6c757d' }}>Tips</h4>
-        <ul style={{ fontSize: '0.8em', color: '#6c757d', paddingLeft: '20px', margin: 0 }}>
+      <div style={{
+        marginTop: 16, padding: 10,
+        background: 'rgba(99,102,241,0.06)',
+        border: '1px solid rgba(99,102,241,0.12)',
+        borderRadius: 8,
+      }}>
+        <h4 style={{ fontSize: 11, marginTop: 0, color: '#818cf8', fontWeight: 600 }}>Tips</h4>
+        <ul style={{ fontSize: 10, color: '#64748b', paddingLeft: 16, margin: 0, lineHeight: 1.6 }}>
           <li>Drag nodes to canvas</li>
-          <li>Connect from bottom→top handles</li>
-          <li>Click "Execute Workflow" to run</li>
+          <li>Connect bottom → top handles</li>
+          <li>Click Execute to run</li>
           <li>Start → Process → Output</li>
         </ul>
       </div>

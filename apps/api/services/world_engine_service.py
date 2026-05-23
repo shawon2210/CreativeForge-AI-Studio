@@ -54,6 +54,15 @@ def get_world(world_id: int, user_id: str) -> Optional[World]:
         return session.exec(select(World).where(World.id == world_id, World.user_id == user_id)).first()
 
 
+def get_worlds(user_id: str) -> List[World]:
+    """List all worlds owned by a user — used by GET /world-engine/worlds/"""
+    if MODE == "mock":
+        return [w for w in _mock_worlds.values() if w.user_id == user_id]
+    from app.database import engine
+    with Session(engine) as session:
+        return session.exec(select(World).where(World.user_id == user_id)).all()
+
+
 # ---------- Character Operations ----------
 def create_character(world_id: int, name: str, description: str, traits: Dict, user_id: str) -> Optional[Character]:
     # Validate world exists and belongs to user

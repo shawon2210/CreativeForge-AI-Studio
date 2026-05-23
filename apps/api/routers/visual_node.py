@@ -1,7 +1,10 @@
+import sys
+from pathlib import Path
 from fastapi import APIRouter, Body
 from typing import Dict, List, Optional
 
-from ..services.visual_node_service import (
+sys.path.append(str(Path(__file__).parent.parent))
+from services.visual_node_service import (
     get_node_templates, create_node_template,
     generate_nodes_from_text, create_workflow_from_text,
     NodeTemplate, Workflow
@@ -49,8 +52,7 @@ async def create_workflow_endpoint(
 
 @router.get("/workflow/{workflow_id}/", response_model=Optional[Workflow])
 async def get_workflow_endpoint(workflow_id: int, user_id: str = Body(...)):
-    # Mock: return workflow from mock storage
-    from ..services.visual_node_service import _mock_workflows
+    from services.visual_node_service import _mock_workflows
     wf = _mock_workflows.get(workflow_id)
     if wf and (wf.user_id == user_id or wf.user_id == "system"):
         return wf

@@ -1,4 +1,20 @@
-import React, { useRef, useCallback, useState } from 'react';
+/**
+ * WorkflowCanvas — Production-grade visual AI workflow builder
+ *
+ * Features:
+ * - Drag-and-drop node palette
+ * - React Flow canvas with custom edges
+ * - Node configuration sidebar
+ * - Execution visualization with real-time status
+ * - Bottom logs panel
+ * - Keyboard shortcuts
+ * - Save/load/export/import
+ * - Snap-to-grid, zoom, pan
+ * - Minimap with custom styling
+ * - Dark futuristic UI theme
+ */
+
+import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -12,460 +28,555 @@ import {
   Node,
   Edge,
   Connection,
-  NodeTypes
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import NodePalette from './NodePalette';
-import StartNode from './StartNode';
-import TextGenNode from './TextGenNode';
-import ImageGenNode from './ImageGenNode';
-import CanvasNode from './CanvasNode';
-import OutputNode from './OutputNode';
+  NodeTypes,
+  EdgeTypes,
+  Panel,
+  SelectionMode,
+  useReactFlow,
+  MarkerType,
+} from 'reactflow'
+import 'reactflow/dist/style.css'
+import { motion, AnimatePresence } from 'framer-motion'
 
-// Register custom node types
+// ─── Workflow System Imports ─────────────────────────────────────────────────
+import { useWorkflowStore } from '../../workflow/stores/workflowStore'
+import { useWorkflowExecution, useWorkflowKeyboard, useAutoSave } from '../../workflow/hooks/useWorkflowExecution'
+import { NODE_TEMPLATES } from '../../workflow/utils/nodeTemplates'
+import { validateWorkflow } from '../../workflow/utils/validation'
+import { downloadWorkflow, uploadWorkflow } from '../../workflow/utils/exportImport'
+import type { WorkflowNode, WorkflowEdge, WorkflowNodeType, NodeStatus } from '../../workflow/types'
+
+// ─── Components ──────────────────────────────────────────────────────────────
+import { NodePalette } from '../../workflow/nodes/NodePalette'
+import { ConfigPanel } from '../../workflow/panels/ConfigPanel'
+import { LogsPanel } from '../../workflow/panels/LogsPanel'
+import WorkflowEdgeComponent from '../../workflow/edges/WorkflowEdge'
+
+// ─── Custom Node Components ──────────────────────────────────────────────────
+import { StartNode } from '../../workflow/nodes/StartNode'
+import { TextGenNode } from '../../workflow/nodes/TextGenNode'
+import { ImageGenNode } from '../../workflow/nodes/ImageGenNode'
+import { CanvasNodeComponent } from '../../workflow/nodes/CanvasNode'
+import { OutputNodeComponent } from '../../workflow/nodes/OutputNode'
+import { AgentNode } from '../../workflow/nodes/AgentNode'
+import { ConditionNode } from '../../workflow/nodes/ConditionNode'
+import { LoopNode } from '../../workflow/nodes/LoopNode'
+import { MemoryNode } from '../../workflow/nodes/MemoryNode'
+import { WebhookNode } from '../../workflow/nodes/WebhookNode'
+import { SubflowNode } from '../../workflow/nodes/SubflowNode'
+
+// ─── Node & Edge Type Registries ────────────────────────────────────────────
 const nodeTypes: NodeTypes = {
   start: StartNode,
   text_gen: TextGenNode,
   image_gen: ImageGenNode,
-  canvas: CanvasNode,
-  output: OutputNode
-};
+  canvas: CanvasNodeComponent,
+  output: OutputNodeComponent,
+  agent: AgentNode,
+  condition: ConditionNode,
+  loop: LoopNode,
+  memory: MemoryNode,
+  webhook: WebhookNode,
+  subflow: SubflowNode,
+}
 
-// Initial nodes with proper configuration
-const initialNodes: Node[] = [
+const edgeTypes: EdgeTypes = {
+  workflow: WorkflowEdgeComponent,
+}
+
+// ─── Initial State ───────────────────────────────────────────────────────────
+const createInitialNodes = (): WorkflowNode[] => [
   {
     id: 'start_1',
-    type: 'start',
-    position: { x: 250, y: 50 },
-    data: { 
-      label: 'Start Workflow',
-      isRunning: false
+    type: 'start' as WorkflowNodeType,
+    position: { x: 400, y: 50 },
+    data: {
+      label: 'Start',
+      status: 'idle' as NodeStatus,
+      description: 'Workflow entry point',
+      icon: '▶',
+      color: '#6366f1',
+      triggerMode: 'manual',
+    },
+  },
+]
+
+// ─── Status Color Map ────────────────────────────────────────────────────────
+const statusColors: Record<NodeStatus, string> = {
+  idle: '#6366f1',
+  running: '#f59e0b',
+  success: '#10b981',
+  error: '#ef4444',
+  warning: '#f97316',
+  cancelled: '#64748b',
+}
+
+// ─── Inner Canvas (needs ReactFlow context) ─────────────────────────────────
+const WorkflowCanvasInner: React.FC = () => {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null)
+  const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes())
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
+  const { project, fitView, setViewport } = useReactFlow()
+
+  // ─── Store & Hooks ──────────────────────────────────────────────────────
+  const store = useWorkflowStore()
+  const { executeWorkflow, cancelExecution, isExecuting, executionLogs, clearResults } = useWorkflowExecution()
+  useWorkflowKeyboard()
+  const { saveIndicator } = useAutoSave()
+
+  // ─── UI State ───────────────────────────────────────────────────────────
+  const [isMobile, setIsMobile] = useState(false)
+  const [isTablet, setIsTablet] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(true)
+  const [configPanelOpen, setConfigPanelOpen] = useState(false)
+  const [logsPanelOpen, setLogsPanelOpen] = useState(false)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  // ─── Responsive ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth
+      setIsMobile(w < 768)
+      setIsTablet(w >= 768 && w < 1024)
+      if (w < 768) setPaletteOpen(false)
+      if (w >= 1024) setPaletteOpen(true)
     }
-  }
-];
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
-const initialEdges: Edge[] = [];
-
-const WorkflowCanvas: React.FC = () => {
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
-
-  const addLog = (message: string) => {
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
-  };
-
+  // ─── Connections ────────────────────────────────────────────────────────
   const onConnect = useCallback(
     (connection: Connection) => {
-      // Validate connection
-      if (connection.source === connection.target) {
-        addLog('Cannot connect node to itself');
-        return;
-      }
-      
-      const newEdge = {
+      if (connection.source === connection.target) return
+      const newEdge: WorkflowEdge = {
         ...connection,
-        id: `${connection.source}-${connection.target}`,
-        type: 'smoothstep',
+        id: `edge_${connection.source}_${connection.target}_${Date.now()}`,
+        type: 'workflow',
         animated: true,
-        style: { stroke: '#2196F3', strokeWidth: 2 }
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
-      addLog(`Connected ${connection.source} → ${connection.target}`);
+        style: { stroke: '#6366f1', strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
+        data: { connectionType: 'data' },
+      } as WorkflowEdge
+      setEdges((eds) => addEdge(newEdge, eds))
     },
-    [setEdges, addLog]
-  );
+    [setEdges]
+  )
 
+  // ─── Drag & Drop ────────────────────────────────────────────────────────
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData('application/reactflow-type', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
+    event.dataTransfer.setData('application/reactflow-type', nodeType)
+    event.dataTransfer.effectAllowed = 'move'
+  }
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
-      event.preventDefault();
+      event.preventDefault()
+      const type = event.dataTransfer.getData('application/reactflow-type') as WorkflowNodeType
+      if (!type || !reactFlowInstance) return
 
-      const type = event.dataTransfer.getData('application/reactflow-type');
-      if (!type || !reactFlowInstance) return;
+      const position = project({
+        x: event.clientX - reactFlowWrapper.current!.getBoundingClientRect().left,
+        y: event.clientY - reactFlowWrapper.current!.getBoundingClientRect().top,
+      })
 
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY
-      });
-
-      const newNode: Node = {
+      const template = NODE_TEMPLATES.find((t) => t.type === type)
+      const newNode: WorkflowNode = {
         id: `${type}_${Date.now()}`,
-        type: type,
+        type,
         position,
-        data: { 
-          label: getNodeLabel(type),
+        data: {
+          label: template?.label || type,
           status: 'idle',
-          prompt: type === 'text_gen' ? 'Enter your prompt here...' : 
-                 type === 'image_gen' ? 'Describe the image...' : undefined
-        }
-      };
+          description: template?.description,
+          icon: template?.icon,
+          color: template?.color,
+          ...template?.defaultData,
+        } as any,
+      }
 
-      setNodes((nds) => [...nds, newNode]);
-      addLog(`Added ${type} node`);
+      setNodes((nds) => [...nds, newNode])
+      if (isMobile) setPaletteOpen(false)
     },
-    [reactFlowInstance, setNodes, addLog]
-  );
+    [reactFlowInstance, setNodes, project, isMobile]
+  )
 
   const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }, [])
 
-  // REAL execution engine
-  const executeWorkflow = useCallback(async () => {
-    setIsExecuting(true);
-    setLogs([]);
-    addLog('Starting workflow execution...');
+  // ─── Node Selection ─────────────────────────────────────────────────────
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedNodeId(node.id)
+    setConfigPanelOpen(true)
+  }, [])
 
-    // Find start node
-    const startNode = nodes.find(n => n.type === 'start');
-    if (!startNode) {
-      addLog('ERROR: No start node found!');
-      alert('No start node found! Add a Start node first.');
-      setIsExecuting(false);
-      return;
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null)
+    setConfigPanelOpen(false)
+  }, [])
+
+  // ─── Clear Workflow ─────────────────────────────────────────────────────
+  const clearWorkflow = useCallback(() => {
+    setNodes(createInitialNodes())
+    setEdges([])
+    clearResults()
+    setSelectedNodeId(null)
+    setConfigPanelOpen(false)
+  }, [setNodes, setEdges, clearResults])
+
+  // ─── Save / Load ────────────────────────────────────────────────────────
+  const handleSave = useCallback(() => {
+    const workflow = {
+      id: store.workflowId || `wf_${Date.now()}`,
+      name: store.workflowName || 'Untitled Workflow',
+      description: store.workflowDescription || '',
+      version: '1.0.0',
+      nodes: nodes as any,
+      edges: edges as any,
+      viewport: reactFlowInstance?.getViewport() || { x: 0, y: 0, zoom: 1 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isTemplate: false,
+      tags: [],
+      userId: 'current_user',
     }
+    store.setWorkflow(workflow)
+    store.markSaved()
+  }, [nodes, edges, reactFlowInstance, store])
 
-    // Build execution order from edges (BFS from start)
-    const executionOrder: Node[] = [];
-    const visited = new Set<string>();
-    const queue: string[] = [startNode.id];
-    
-    while (queue.length > 0) {
-      const currentId = queue.shift()!;
-      if (visited.has(currentId)) continue;
-      visited.add(currentId);
-      
-      const node = nodes.find(n => n.id === currentId);
-      if (node && node.type !== 'start') {
-        executionOrder.push(node);
+  const handleExport = useCallback(() => {
+    const workflow = {
+      id: store.workflowId || `wf_${Date.now()}`,
+      name: store.workflowName || 'Untitled Workflow',
+      description: store.workflowDescription || '',
+      version: '1.0.0',
+      nodes: nodes as any,
+      edges: edges as any,
+      viewport: reactFlowInstance?.getViewport() || { x: 0, y: 0, zoom: 1 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isTemplate: false,
+      tags: [],
+      userId: 'current_user',
+    }
+    downloadWorkflow(workflow)
+  }, [nodes, edges, reactFlowInstance, store])
+
+  const handleImport = useCallback(async () => {
+    try {
+      const workflow = await uploadWorkflow()
+      if (workflow) {
+        setNodes(workflow.nodes || [])
+        setEdges(workflow.edges || [])
+        store.setWorkflow(workflow)
+        setTimeout(() => fitView({ padding: 0.2 }), 100)
       }
-      
-      // Find outgoing edges
-      const outgoingEdges = edges.filter(e => e.source === currentId);
-      for (const edge of outgoingEdges) {
-        if (edge.target && !visited.has(edge.target)) {
-          queue.push(edge.target);
-        }
-      }
+    } catch (err) {
+      console.error('Import failed:', err)
     }
+  }, [setNodes, setEdges, store, fitView])
 
-    addLog(`Found ${executionOrder.length} nodes to execute`);
+  // ─── Validation ─────────────────────────────────────────────────────────
+  const validation = useMemo(() => validateWorkflow(nodes as any, edges as any), [nodes, edges])
+  const hasErrors = validation.errors.length > 0
 
-    // Execute nodes in order
-    const nodeResults: Record<string, any> = {};
-    
-    for (const node of executionOrder) {
-      addLog(`Executing: ${node.data.label} (${node.type})`);
-      
-      // Update node status to running
-      setNodes(nds => nds.map(n => 
-        n.id === node.id ? { ...n, data: { ...n.data, status: 'running' } } : n
-      ));
-
-      try {
-        let result;
-        
-        switch (node.type) {
-          case 'text_gen':
-            result = await executeTextGenNode(node, nodeResults);
-            break;
-          case 'image_gen':
-            result = await executeImageGenNode(node, nodeResults);
-            break;
-          case 'canvas':
-            result = await executeCanvasNode(node, nodeResults);
-            break;
-          case 'output':
-            result = await executeOutputNode(node, nodeResults);
-            break;
-          default:
-            result = { success: true, message: 'Unknown node type' };
-        }
-        
-        nodeResults[node.id] = result;
-        
-        // Update node status to success
-        setNodes(nds => nds.map(n => 
-          n.id === node.id ? { 
-            ...n, 
-            data: { 
-              ...n.data, 
-              status: 'success',
-              result: (result as any).output || (result as any).message,
-              imageUrl: (result as any).imageUrl
-            } 
-          } : n
-        ));
-        
-        addLog(`✓ ${node.data.label} completed`);
-        
-      } catch (error: any) {
-        addLog(`✗ ${node.data.label} failed: ${error.message}`);
-        
-        // Update node status to error
-        setNodes(nds => nds.map(n => 
-          n.id === node.id ? { ...n, data: { ...n.data, status: 'error' } } : n
-        ));
-      }
-      
-      // Small delay between nodes
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    addLog('Workflow execution completed!');
-    setIsExecuting(false);
-    alert('Workflow execution completed! Check logs for details.');
-  }, [nodes, edges, setNodes, addLog]);
-
-  // Execute Text Generation Node
-  const executeTextGenNode = async (node: Node, results: Record<string, any>) => {
-    const prompt = node.data.prompt || 'Default prompt';
-    
-    // Call backend API
-    const response = await fetch('http://localhost:5000/prompt-to-product/generate/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: 'mock_user_123',
-        prompt: prompt,
-        product_type: 'text'
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      success: true,
-      output: data.generated_text || data.message || 'Text generated successfully',
-      raw: data
-    };
-  };
-
-  // Execute Image Generation Node
-  const executeImageGenNode = async (node: Node, results: Record<string, any>) => {
-    const prompt = node.data.prompt || 'A beautiful image';
-    
-    const response = await fetch('http://localhost:5000/render-preview/generate/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: 'mock_user_123',
-        prompt: prompt,
-        width: 512,
-        height: 512,
-        style: 'cinematic'
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      success: true,
-      imageUrl: data.image_url || 'https://via.placeholder.com/200x200?text=Generated',
-      output: 'Image generated',
-      raw: data
-    };
-  };
-
-  // Execute Canvas Node
-  const executeCanvasNode = async (node: Node, results: Record<string, any>) => {
-    // Get input from connected nodes
-    const incomingEdges = edges.filter(e => e.target === node.id);
-    let inputText = '';
-    
-    for (const edge of incomingEdges) {
-      const sourceResult = results[edge.source];
-      if (sourceResult?.output) {
-        inputText += sourceResult.output + ' ';
-      }
-    }
-    
-    // Simulate canvas processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      success: true,
-      output: `Canvas processed: ${inputText || 'No input'}`,
-      inputText
-    };
-  };
-
-  // Execute Output Node
-  const executeOutputNode = async (node: Node, results: Record<string, any>) => {
-    const incomingEdges = edges.filter(e => e.target === node.id);
-    let finalOutput = '';
-    let imageUrl = '';
-    
-    for (const edge of incomingEdges) {
-      const sourceResult = results[edge.source];
-      if (sourceResult?.output) {
-        finalOutput += sourceResult.output + '\n';
-      }
-      if (sourceResult?.imageUrl) {
-        imageUrl = sourceResult.imageUrl;
-      }
-    }
-    
-    // Update output node data
-    setNodes(nds => nds.map(n => 
-      n.id === node.id ? { 
-        ...n, 
-        data: { 
-          ...n.data, 
-          result: finalOutput || 'No output',
-          type: imageUrl ? 'image' : 'text',
-          input: finalOutput
-        } 
-      } : n
-    ));
-    
-    return {
-      success: true,
-      output: finalOutput || 'Output displayed',
-      imageUrl
-    };
-  };
+  // ─── Render ─────────────────────────────────────────────────────────────
+  const canvasHeight = isMobile ? 'calc(100vh - 140px)' : 'calc(100vh - 160px)'
+  const paletteWidth = isMobile ? '100%' : isTablet ? 220 : 260
 
   return (
-    <div style={{ display: 'flex', height: '700px', border: '2px solid #9C27B0', borderRadius: '10px', overflow: 'hidden' }}>
-      <NodePalette onDragStart={onDragStart} />
-      
-      <div ref={reactFlowWrapper} style={{ flex: 1, height: '100%', position: 'relative' }}>
-        <ReactFlowProvider>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
+    <div style={{ display: 'flex', height: canvasHeight, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', background: '#08080f' }}>
+
+      {/* ─── Node Palette ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {paletteOpen && (
+          <motion.div
+            initial={{ x: -paletteWidth, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -paletteWidth, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            style={{
+              width: paletteWidth,
+              minWidth: paletteWidth,
+              position: isMobile ? 'absolute' : 'relative',
+              zIndex: isMobile ? 30 : 'auto',
+              height: '100%',
+              background: '#0a0a14',
+              borderRight: '1px solid rgba(255,255,255,0.06)',
+              overflowY: 'auto',
+            }}
           >
-            <Controls />
-            <MiniMap 
-              nodeColor={(node) => {
-                switch(node.type) {
-                  case 'start': return '#667eea';
-                  case 'text_gen': return '#2196F3';
-                  case 'image_gen': return '#FF9800';
-                  case 'canvas': return '#9C27B0';
-                  case 'output': return '#667eea';
-                  default: return '#ccc';
-                }
-              }}
-            />
-            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-            
-            {/* Execute and Clear Buttons */}
-            <div style={{
-              position: 'absolute',
-              bottom: '20px',
-              right: '20px',
-              zIndex: 10,
-              display: 'flex',
-              gap: '10px'
+            <NodePalette onDragStart={onDragStart} isMobile={isMobile} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Main Canvas Area ──────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+
+        {/* Toolbar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+          background: '#0c0c16', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          flexWrap: 'wrap',
+        }}>
+          {/* Mobile palette toggle */}
+          {isMobile && (
+            <button onClick={() => setPaletteOpen(!paletteOpen)}
+              style={toolbarButtonStyle('#6366f1')}>
+              {paletteOpen ? '✕' : '☰'}
+            </button>
+          )}
+
+          {/* Execute / Stop */}
+          <button onClick={isExecuting ? cancelExecution : executeWorkflow}
+            disabled={hasErrors && !isExecuting}
+            style={{
+              ...toolbarButtonStyle(isExecuting ? '#ef4444' : '#10b981'),
+              opacity: hasErrors && !isExecuting ? 0.5 : 1,
             }}>
-              <button
-                onClick={() => {
-                  if (window.confirm('Clear all nodes except Start?')) {
-                    setNodes(initialNodes);
-                    setEdges([]);
-                    setLogs([]);
-                  }
-                }}
+            {isExecuting ? '◌ Stop' : '▶ Run'}
+          </button>
+
+          {/* Clear */}
+          <button onClick={clearWorkflow} disabled={isExecuting}
+            style={toolbarButtonStyle('#64748b')}>
+            ✕ Clear
+          </button>
+
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
+          {/* Save / Export / Import */}
+          <button onClick={handleSave} style={toolbarButtonStyle('#6366f1')}>
+            💾 Save
+          </button>
+          <button onClick={handleExport} style={toolbarButtonStyle('#8b5cf6')}>
+            📤 Export
+          </button>
+          <button onClick={handleImport} style={toolbarButtonStyle('#8b5cf6')}>
+            📥 Import
+          </button>
+
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
+          {/* Logs toggle */}
+          <button onClick={() => setLogsPanelOpen(!logsPanelOpen)}
+            style={toolbarButtonStyle(logsPanelOpen ? '#f59e0b' : '#64748b')}>
+            📋 Logs {executionLogs.length > 0 && `(${executionLogs.length})`}
+          </button>
+
+          {/* Config panel toggle */}
+          <button onClick={() => setConfigPanelOpen(!configPanelOpen)}
+            style={toolbarButtonStyle(configPanelOpen ? '#ec4899' : '#64748b')}>
+            ⚙ Config
+          </button>
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Validation status */}
+          {hasErrors && (
+            <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 600 }}>
+              ⚠ {validation.errors.length} error{validation.errors.length > 1 ? 's' : ''}
+            </span>
+          )}
+          {!hasErrors && validation.warnings.length > 0 && (
+            <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>
+              ⚠ {validation.warnings.length} warning{validation.warnings.length > 1 ? 's' : ''}
+            </span>
+          )}
+
+          {/* Save indicator */}
+          {saveIndicator === 'saved' && (
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>
+              ✓ Saved
+            </motion.span>
+          )}
+          {saveIndicator === 'saving' && (
+            <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>◌ Saving...</span>
+          )}
+        </div>
+
+        {/* Canvas + Panels */}
+        <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+
+          {/* React Flow Canvas */}
+          <div ref={reactFlowWrapper} style={{ flex: 1, height: '100%', position: 'relative' }}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              style={{ background: '#08080f' }}
+              proOptions={{ hideAttribution: true }}
+              selectionOnDrag={true}
+              panOnScroll={false}
+              selectionMode={SelectionMode.Partial}
+              snapToGrid={true}
+              snapGrid={[15, 15]}
+              defaultEdgeOptions={{
+                type: 'workflow',
+                animated: true,
+                style: { stroke: '#6366f1', strokeWidth: 2 },
+                markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' },
+              }}
+            >
+              <Controls
                 style={{
-                  padding: '10px 20px',
-                  background: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.9em',
-                  fontWeight: 'bold',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                  background: '#12121a',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                }}
+                showInteractive={false}
+              />
+              {!isMobile && (
+                <MiniMap
+                  nodeColor={(node) => {
+                    const status = (node.data?.status as NodeStatus) || 'idle'
+                    return statusColors[status] || '#6366f1'
+                  }}
+                  style={{
+                    background: '#0a0a14',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 8,
+                  }}
+                  maskColor="rgba(0,0,0,0.7)"
+                  nodeStrokeWidth={2}
+                  zoomable
+                  pannable
+                />
+              )}
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={20}
+                size={1}
+                color="rgba(255,255,255,0.04)"
+              />
+
+              {/* Execution overlay */}
+              {isExecuting && (
+                <Panel position="top-center">
+                  <motion.div
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    style={{
+                      background: 'rgba(245,158,11,0.15)',
+                      border: '1px solid rgba(245,158,11,0.3)',
+                      borderRadius: 8,
+                      padding: '8px 16px',
+                      color: '#fbbf24',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      backdropFilter: 'blur(8px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ animation: 'pulse 1s infinite' }}>◌</span>
+                    Executing workflow...
+                  </motion.div>
+                </Panel>
+              )}
+            </ReactFlow>
+          </div>
+
+          {/* ─── Configuration Panel ──────────────────────────────────── */}
+          <AnimatePresence>
+            {configPanelOpen && selectedNodeId && (
+              <motion.div
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 300, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                style={{
+                  width: isMobile ? '100%' : 300,
+                  position: isMobile ? 'absolute' : 'relative',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  zIndex: 20,
+                  background: '#0c0c16',
+                  borderLeft: '1px solid rgba(255,255,255,0.06)',
+                  overflowY: 'auto',
                 }}
               >
-                ✕ Clear
-              </button>
-              
-              <button
-                onClick={executeWorkflow}
-                disabled={isExecuting}
-                style={{
-                  padding: '10px 20px',
-                  background: isExecuting ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isExecuting ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9em',
-                  fontWeight: 'bold',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}
-              >
-                {isExecuting ? 'Executing...' : '▶ Execute Workflow'}
-              </button>
-            </div>
-            
-            {/* Log Panel */}
-            {logs.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                width: '300px',
-                maxHeight: '200px',
-                overflowY: 'auto',
-                background: 'rgba(0,0,0,0.8)',
-                color: '#0f0',
-                padding: '10px',
-                borderRadius: '6px',
-                fontSize: '0.75em',
-                fontFamily: 'monospace',
-                zIndex: 10
-              }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Execution Logs:</div>
-                {logs.map((log, idx) => (
-                  <div key={idx}>{log}</div>
-                ))}
-              </div>
+                <ConfigPanel
+                  nodeId={selectedNodeId}
+                  node={nodes.find((n) => n.id === selectedNodeId) as WorkflowNode | undefined}
+                  onClose={() => { setConfigPanelOpen(false); setSelectedNodeId(null) }}
+                  onUpdate={(data) => {
+                    setNodes((nds) =>
+                      nds.map((n) => (n.id === selectedNodeId ? { ...n, data: { ...n.data, ...data } } : n))
+                    )
+                  }}
+                />
+              </motion.div>
             )}
-          </ReactFlow>
-        </ReactFlowProvider>
+          </AnimatePresence>
+        </div>
+
+        {/* ─── Logs Panel ─────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {logsPanelOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 200, opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                background: '#0a0a14',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                overflow: 'hidden',
+              }}
+            >
+              <LogsPanel logs={executionLogs} onClear={clearResults} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
-  );
-};
+  )
+}
 
-const getNodeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    'start': 'Start',
-    'text_gen': 'Text Generation',
-    'image_gen': 'Image Generation',
-    'canvas': 'CreativeForge Canvas',
-    'output': 'Output'
-  };
-  return labels[type] || type;
-};
+// ─── Toolbar Button Style Helper ────────────────────────────────────────────
+function toolbarButtonStyle(color: string): React.CSSProperties {
+  return {
+    padding: '6px 12px',
+    background: `${color}15`,
+    color: color,
+    border: `1px solid ${color}30`,
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 11,
+    fontWeight: 600,
+    transition: 'all 150ms ease',
+    whiteSpace: 'nowrap' as const,
+  }
+}
 
-export default WorkflowCanvas;
+// ─── Exported Wrapper (provides ReactFlowProvider) ──────────────────────────
+const WorkflowCanvas: React.FC = () => {
+  return (
+    <ReactFlowProvider>
+      <WorkflowCanvasInner />
+    </ReactFlowProvider>
+  )
+}
+
+export default WorkflowCanvas

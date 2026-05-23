@@ -1,11 +1,20 @@
 import { create } from 'zustand';
 
-interface Generation {
+export type GenerationMode = 'text' | 'image' | 'multimodal';
+export type JobStatus = 'idle' | 'queued' | 'running' | 'success' | 'error';
+
+export interface Generation {
   id: string;
+  mode: GenerationMode;
   prompt: string;
   result: string;
-  status: 'idle' | 'running' | 'success' | 'error';
+  imageUrl?: string;
+  status: JobStatus;
+  error?: string;
+  agentAnalysis?: Record<string, unknown>;
   createdAt: string;
+  emotion?: string;
+  intensity?: number;
 }
 
 interface GenerationState {

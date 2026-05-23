@@ -1,9 +1,10 @@
 import os
+import sys; sys.path.append(str(__file__ + "/../../"))
 from typing import Dict, Optional, List
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ..models.style_genome import StyleDNA, StyleMutation, StyleEvolution
+from models.style_genome import StyleDNA, StyleMutation, StyleEvolution
 
 MODE = os.getenv("CREATIVEFORGE_MODE", "mock")
 

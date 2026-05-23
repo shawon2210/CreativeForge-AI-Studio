@@ -28,6 +28,6 @@
     "@vitejs/plugin-react": "^4.7.0",
     "peer": "^1.0.2",
     "typescript": "~5.6.0",
-    "vite": "^8.0.0"
+    "vite": "^7.3.3"
   }
 }

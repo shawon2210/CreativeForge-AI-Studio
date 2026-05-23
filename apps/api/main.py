@@ -46,6 +46,7 @@ from routers.research_inspiration import router as research_router
 from routers.future_ready import router as future_router
 from routers.world_engine import router as world_router
 from routers.emotion_ai import router as emotion_router
+from routers.workflow import router as workflow_router
 
 # ---- Register all routers ----
 app.include_router(style_router)
@@ -65,6 +66,7 @@ app.include_router(research_router)
 app.include_router(future_router)
 app.include_router(world_router)
 app.include_router(emotion_router)
+app.include_router(workflow_router)
 
 # ---- Health check ----
 @app.get("/health")

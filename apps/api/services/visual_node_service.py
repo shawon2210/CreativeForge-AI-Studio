@@ -1,9 +1,10 @@
 import os
+import sys; sys.path.append(str(__file__ + "/../../"))
 from typing import Dict, Optional, List, Any
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ..models.visual_node import NodeTemplate, Workflow, NodeConnection
+from models.visual_node import NodeTemplate, Workflow, NodeConnection
 
 MODE = os.getenv("CREATIVEFORGE_MODE", "mock")
 

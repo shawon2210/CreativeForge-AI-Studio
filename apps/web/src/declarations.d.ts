@@ -10,3 +10,6 @@ declare module '*.woff';
 declare module '*.woff2';
 declare module '*.ttf';
 declare module '*.eot';
+
+/* Vite client types for import.meta.env */
+/// <reference types="vite/client" />

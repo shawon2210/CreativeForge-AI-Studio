@@ -1,12 +1,15 @@
+import sys
+from pathlib import Path
 from fastapi import APIRouter, Body
 from typing import Dict, List, Optional
 
-from ..services.multi_agent_service import (
+sys.path.append(str(Path(__file__).parent.parent))
+from services.multi_agent_service import (
     BaseAgent, DirectorAgent, WriterAgent, VisualAgent,
     LightingAgent, ConsistencyAgent, PromptEngineerAgent,
     get_agent
 )
-from ..models.multi_agent import Agent, AgentMessage, AgentTask
+from models.multi_agent import Agent, AgentMessage, AgentTask
 
 router = APIRouter(prefix="/multi-agent", tags=["Multi-Agent Collaboration"])
 
@@ -55,7 +58,6 @@ async def send_message_endpoint(
 
 @router.get("/messages/{agent_id}/", response_model=List[AgentMessage])
 async def get_messages_endpoint(agent_id: int, as_sender: bool = False):
-    # Mock: get agent by id
     agent = get_mock_agent_by_id(agent_id)
     if not agent:
         return []
@@ -75,27 +77,22 @@ async def create_task_endpoint(
 
 @router.post("/task/process/{task_id}/")
 async def process_task_endpoint(task_id: int, agent_id: int = Body(...)):
-    # Mock processing
     return {"status": "processed", "task_id": task_id, "result": {"mock": "result"}}
 
 # ---------- Helper Functions (Mock Only) ----------
 def get_agent_by_id(agent_id: int, user_id: str) -> Optional[BaseAgent]:
-    """Retrieve agent by ID (mock mode)"""
-    from ..services.multi_agent_service import _mock_agents
+    from services.multi_agent_service import _mock_agents
     agent_model = _mock_agents.get(agent_id)
     if not agent_model:
         return None
-    # Recreate the appropriate agent class
     if agent_model.agent_type == "director":
         return DirectorAgent(name=agent_model.name, user_id=user_id)
     elif agent_model.agent_type == "writer":
         return WriterAgent(name=agent_model.name, user_id=user_id)
-    # Add other types as needed
     return None
 
 def get_mock_agent_by_id(agent_id: int) -> Optional[BaseAgent]:
-    """Get mock agent by ID"""
-    from ..services.multi_agent_service import _mock_agents
+    from services.multi_agent_service import _mock_agents
     agent_model = _mock_agents.get(agent_id)
     if not agent_model:
         return None

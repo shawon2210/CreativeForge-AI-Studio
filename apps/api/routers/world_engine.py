@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 sys.path.append(str(Path(__file__).parent.parent))
 
 from services.world_engine_service import (
-    create_world, get_world,
+    create_world, get_world, get_worlds,
     create_character, get_characters,
     create_location,
     create_timeline_event,
@@ -35,6 +35,12 @@ async def create_world_endpoint(
     user_id: str = Body(...)
 ):
     return create_world(name=name, description=description, user_id=user_id)
+
+
+@router.get("/worlds/")
+async def list_worlds_endpoint(user_id: str = Query(...)):
+    """List all worlds owned by a user"""
+    return get_worlds(user_id=user_id)
 
 
 @router.get("/worlds/{world_id}")

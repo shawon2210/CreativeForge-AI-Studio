@@ -24,7 +24,9 @@ const CollaborativeStudio = lazy(() => import('./components/collaborative-studio
 const CreativeTwin = lazy(() => import('./components/creative-twin/CreativeTwin'));
 const ResearchInspiration = lazy(() => import('./components/research-inspiration/ResearchInspiration'));
 const FutureReady = lazy(() => import('./components/future-ready/FutureReady'));
+const UnifiedDashboard = lazy(() => import('./components/dashboard/UnifiedDashboard'));
 const WorkflowCanvas = lazy(() => import('./components/visual-node/WorkflowCanvas'));
+const AIGenerations = lazy(() => import('./components/ai-generations/AIGenerations'));
 
 // Skeleton loader for lazy-loaded pages
 const PageSkeleton: React.FC = () => (
@@ -78,7 +80,8 @@ function AppRoutes() {
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/generations" element={<DashboardPage />} />
+        <Route path="/unified" element={<FeaturePage title="Unified Pipeline" subtitle="All 23 features working together in real-time" badge={{ text: 'Live', variant: 'success' }}><UnifiedDashboard /></FeaturePage>} />
+        <Route path="/generations" element={<FeaturePage title="AI Generations" subtitle="Text, image, and multi-modal generation with AI Creative Director" badge={{ text: 'Active', variant: 'success' }}><AIGenerations /></FeaturePage>} />
         <Route path="/workflow" element={<FeaturePage title="Visual Workflow" subtitle="Build AI pipelines with drag-and-drop nodes" badge={{ text: 'Active', variant: 'success' }}><WorkflowCanvas /></FeaturePage>} />
         <Route path="/world-engine" element={<FeaturePage title="World Engine" subtitle="Build consistent story worlds" badge={{ text: 'Active', variant: 'success' }}><WorldDashboard /></FeaturePage>} />
         <Route path="/emotion-ai" element={<FeaturePage title="Emotion AI" subtitle="Emotion-aware generation controls" badge={{ text: 'Active', variant: 'success' }}><EmotionAIWrapper /></FeaturePage>} />

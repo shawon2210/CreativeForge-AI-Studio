@@ -12,21 +12,25 @@ interface StartNodeProps {
 const StartNode: React.FC<StartNodeProps> = ({ data }) => {
   return (
     <div style={{
-      padding: '15px 20px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontWeight: 'bold',
-      fontSize: '0.9em',
-      minWidth: '120px',
+      padding: '12px 20px',
+      background: 'rgba(14,14,24,0.95)',
+      border: '1px solid rgba(99,102,241,0.35)',
+      borderRadius: 8,
+      fontWeight: 600,
+      fontSize: 12,
+      minWidth: 120,
       textAlign: 'center',
       cursor: 'pointer',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+      color: '#c7d2fe',
+      boxShadow: '0 2px 8px rgba(99,102,241,0.15)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
     }}>
-      <Handle type="source" position={Position.Bottom} style={{ background: '#fff' }} />
-      <div>{data.label || 'Start'}</div>
-      {data.isRunning && <div style={{ fontSize: '0.8em', marginTop: '5px' }}>Running...</div>}
+      <Handle type="source" position={Position.Bottom} style={{ background: '#6366f1', width: 8, height: 8 }} />
+      <span style={{ fontSize: 16 }}>▶</span>
+      <span>{data.label || 'Start'}</span>
+      {data.isRunning && (
+        <span style={{ fontSize: 10, color: '#818cf8', fontWeight: 400 }}>Running...</span>
+      )}
     </div>
   );
 };
